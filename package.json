@@ -1,0 +1,22 @@
+{
+  "name": "playtest-match",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "node scripts/build.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node smoke.mjs && node preferences.test.mjs && node features.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "rollup": "4.68.3",
+    "vite": "^6.0.0"
+  }
+}

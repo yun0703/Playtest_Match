@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {loadEnv} from 'vite';
+import {createClient} from '@supabase/supabase-js';
+const env=loadEnv('production',process.cwd(),'VITE_');
+const client=createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const {data,error}=await client.rpc('pt_snapshot');assert.ifError(error);assert.ok(Array.isArray(data.tests));assert.equal(data.viewer.id,null);assert.equal(data.viewer.admin,false);assert.ok(data.tests.every(t=>!t.link&&!t.how&&!t.code&&!t.survey.length));
+const direct=await client.from('pt_secrets').select('*');assert.ok(direct.error,'Private table must not be readable');
+const mutation=await client.rpc('pt_command',{action:'save_test',payload:{}});assert.ok(mutation.error,'Anonymous mutation must be blocked');
+const file=await client.storage.from('playtest-media').download('bug/00000000-0000-0000-0000-000000000000/private');assert.ok(file.error,'Anonymous private upload must not be readable');
+console.log('PASS live Supabase: public snapshot, private fields, private table access, anonymous mutation, private storage');

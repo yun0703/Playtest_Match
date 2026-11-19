@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {normalizePreferences,readPreferences,translateText} from './src/preferences.js';
+assert.deepEqual(normalizePreferences(null),{theme:'light',language:'ko'});
+assert.deepEqual(normalizePreferences({theme:'oops',language:'oops'}),{theme:'light',language:'ko'});
+assert.deepEqual(readPreferences({getItem(){return '{bad';}}),{theme:'light',language:'ko'});
+assert.deepEqual(readPreferences({getItem(){return JSON.stringify({theme:'dark',language:'en'});}}),{theme:'dark',language:'en'});
+assert.equal(translateText('모집 중 6','en'),'Open 6');
+assert.equal(translateText('3/8명','en'),'3/8 testers');
+assert.equal(translateText('질문 2 유형','en'),'Question 2: type');
+assert.equal(translateText('5점 척도 · 3건','en'),'5-point scale · 3 responses');
+assert.equal(translateText('질문 2번의 보기는 서로 다른 2~6개가 필요합니다.','en'),'Question 2 needs 2–6 distinct options.');
+assert.equal(translateText('달빛 정거장','en'),'달빛 정거장');
+assert.equal(translateText('게임 검색','ko'),'게임 검색');
+console.log('PASS preference validation, persistence, UI translation and original game content');

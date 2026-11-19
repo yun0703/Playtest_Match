@@ -1,0 +1,33 @@
+begin;
+do $$
+declare owner_id uuid=gen_random_uuid();tester_id uuid=gen_random_uuid();outsider uuid=gen_random_uuid();snapshot jsonb;id text;bug_id text;draft jsonb;failed boolean;value jsonb;
+begin
+ insert into auth.users(id,aud,role,raw_user_meta_data) values(owner_id,'authenticated','authenticated','{"nickname":"QA owner"}'),(tester_id,'authenticated','authenticated','{"nickname":"QA tester"}'),(outsider,'authenticated','authenticated','{"nickname":"QA outsider"}');
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ draft=jsonb_build_object('title','QA rollback test','team','QA','teaser','This is a rollback-only integration test.','feedbackFocus','Check server-side authorization and private build visibility.','genre','퍼즐','platform','WebGL','build','v1','minutes',15,'slots',1,'vis','approval','deadline','','link','https://example.com/private-build','how','Private play instructions for approved testers.','survey','[{"id":"q1","label":"Rating","type":"scale","required":true,"options":[]}]'::jsonb,'media','[]'::jsonb);
+ snapshot=pt_command('save_test',jsonb_build_object('data',draft));id=snapshot->'tests'->0->>'id';
+ if id is null then raise exception 'FAIL: create test';end if;
+ perform set_config('request.jwt.claim.sub','',true);snapshot=pt_snapshot();
+ if snapshot->'tests'->0->>'link'<>'' or jsonb_array_length(snapshot->'tests'->0->'survey')<>0 then raise exception 'FAIL: anonymous private data exposure';end if;
+ if has_table_privilege('anon','public.pt_secrets','select') or has_table_privilege('authenticated','public.pt_tests','update') or has_function_privilege('anon','public.pt_command(text,jsonb)','execute') then raise exception 'FAIL: direct access grants';end if;
+ perform set_config('request.jwt.claim.sub',tester_id::text,true);
+ snapshot=pt_command('apply',jsonb_build_object('testId',id,'agreed',true));
+ if snapshot->'mine'->id->>'status'<>'waiting' or snapshot->'tests'->0->>'link'<>'' then raise exception 'FAIL: approval gate';end if;
+ failed=false;begin perform pt_command('toggle_close',jsonb_build_object('testId',id));exception when others then failed=true;end;if not failed then raise exception 'FAIL: non-owner mutation';end if;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);perform pt_command('review_application',jsonb_build_object('testId',id,'testerId',tester_id,'decision','approve'));
+ perform set_config('request.jwt.claim.sub',tester_id::text,true);snapshot=pt_snapshot();if snapshot->'tests'->0->>'link'<>'https://example.com/private-build' then raise exception 'FAIL: approved build access';end if;
+ perform pt_command('start_play',jsonb_build_object('testId',id));
+ snapshot=pt_command('bug',jsonb_build_object('testId',id,'data',jsonb_build_object('title','QA issue','description','Example issue description for verification.','steps','Start then open settings.','device','QA browser','severity','normal','attachments','[]'::jsonb)));bug_id=snapshot->'bugs'->0->>'id';
+ failed=false;begin perform pt_command('bug_status',jsonb_build_object('bugId',bug_id,'status','fixed','note','Unauthorized'));exception when others then failed=true;end;if not failed then raise exception 'FAIL: tester status mutation';end if;
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);perform pt_command('bug_status',jsonb_build_object('bugId',bug_id,'status','fixed','note','QA fix'));
+ perform set_config('request.jwt.claim.sub',tester_id::text,true);
+ snapshot=pt_command('feedback',jsonb_build_object('testId',id,'answers','{"q1":4}'::jsonb,'issueStatus','reported','bugIds',jsonb_build_array(bug_id)));
+ if snapshot->'mine'->id->>'status'<>'done' or snapshot->'notifications'->0->>'status'<>'fixed' then raise exception 'FAIL: feedback or issue notification';end if;
+ failed=false;begin perform pt_command('feedback',jsonb_build_object('testId',id,'answers','{"q1":4}'::jsonb,'issueStatus','none'));exception when others then failed=true;end;if not failed then raise exception 'FAIL: duplicate feedback';end if;
+ perform set_config('request.jwt.claim.sub',outsider::text,true);
+ failed=false;begin perform pt_command('apply',jsonb_build_object('testId',id,'agreed',true));exception when others then failed=true;end;if not failed then raise exception 'FAIL: capacity';end if;
+ snapshot=pt_snapshot();if jsonb_array_length(snapshot->'bugs')<>0 then raise exception 'FAIL: other tester bug privacy';end if;
+ failed=false;begin perform pt_command('hide',jsonb_build_object('testId',id,'note','Unauthorized'));exception when others then failed=true;end;if not failed then raise exception 'FAIL: admin permission';end if;
+end $$;
+select 'PASS: anonymous isolation, ownership, approval, capacity, bug privacy, linked feedback, notifications, duplicates, admin permissions' as result;
+rollback;
