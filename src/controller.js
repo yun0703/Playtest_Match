@@ -265,7 +265,7 @@ function summaryHtml(t){
       body=`<ul class="list">${vals.map(v=>`<li>${esc(v)}</li>`).join('')||'<li class="muted">응답 없음</li>'}</ul>`;
     }
     return `<div class="qres"><p><strong>${esc(q.label)}</strong> <span class="mono muted">${QTYPE[q.type]} · ${vals.length}건</span></p>${body}</div>`;
-  }).join('')}</div>${linked.length?`<details class="res"><summary>설문에 연결된 버그 <span>${linked.length}</span></summary>${bugListHtml(t,linked)}</details>`:''}`;
+  }).join('')}</div>${linked.length?`<details class="res"><summary>설문에 연결된 버그 <span>${linked.length}</span></summary>${bugListHtml(t,linked,{ownOnly:false})}</details>`:''}`;
 }
 function reqsHtml(t){
   const r=t.requests||[];

@@ -47,3 +47,12 @@ assert.equal(isLegacyBugQuestion({type:'text',required:false,label:'발견한 �
 assert.equal(isLegacyBugQuestion({type:'text',required:true,label:'발견한 버그가 있다면 적어 주세요.'}),false);
 assert.equal(isLegacyBugQuestion({type:'text',required:false,label:'커스텀 질문'}),false);
 console.log('PASS issue linking ownership, wrong-test prevention, new-report gate and legacy question preservation');
+
+const {bugListHtml}=await import('./src/feature-views.js');
+const linkedBug={id:'linked',testId:'qa-test',testerId:'tester-account',title:'Linked tester issue',severity:'normal',status:'new',createdAt:'2026-11-21T00:00:00Z',attachments:[]};
+assert.ok(!bugListHtml({id:'qa-test'},[linkedBug]).includes(linkedBug.title));
+const developerSummary=bugListHtml({id:'qa-test'},[linkedBug],{ownOnly:false});
+assert.ok(developerSummary.includes(linkedBug.title));
+assert.ok(!developerSummary.includes('data-form="bug-status"'));
+assert.ok(!bugListHtml({id:'different-test'},[linkedBug],{ownOnly:false}).includes(linkedBug.title));
+console.log('PASS developer linked bug visibility, read-only summary and test isolation');
