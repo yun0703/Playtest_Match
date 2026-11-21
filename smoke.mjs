@@ -17,3 +17,16 @@ if(!elements.get('#main').innerHTML.includes('data-form="apply"'))throw Error('D
 console.log('PASS featured detail and application form');
 dispose();
 
+let refreshAccount;
+const cloud={user:{id:'member'},canAdmin:false,mountAccount(fn){refreshAccount=fn;return ()=>{};},async snapshot(){return {tests:[]};}};
+location.hash='#developer';
+const disposeCloud=initialize({cloud,initialState:{tests:[]}});
+await handlers.click({target:{closest:selector=>selector==='[data-act]'?{dataset:{act:'tab-d',tab:'new'},disabled:false}:null},preventDefault(){}});
+if(!elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Member cannot publish');
+cloud.user=null;
+await refreshAccount(true);
+if(elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Developer form survived sign-out');
+if(!elements.get('#main').innerHTML.includes('인디게임 플레이테스트'))throw Error('Signed-out page did not render');
+disposeCloud();
+console.log('PASS signed-in member publishing and account reset with empty private state');
+

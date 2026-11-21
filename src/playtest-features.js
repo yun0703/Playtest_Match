@@ -32,7 +32,7 @@ export function bugValidation(data){
  if(!Object.hasOwn(SEVERITIES,data.severity))return '심각도를 선택해 주세요.';
  return '';
 }
-export function migrateFeatures(state){state.bugs=Array.isArray(state.bugs)?state.bugs:[];state.notifications=Array.isArray(state.notifications)?state.notifications:[];state.readNotifications=state.readNotifications||{};state.tests.forEach(t=>{t.media=Array.isArray(t.media)?t.media:[];t.deadline=t.deadline||'';t.feedbackFocus=typeof t.feedbackFocus==='string'?t.feedbackFocus:'';});return state;}
+export function migrateFeatures(state){for(const key of ['tests','reports','log','bugs','notifications'])state[key]=Array.isArray(state[key])?state[key]:[];for(const key of ['mine','myReports','readNotifications'])state[key]=state[key]||{};state.tests.forEach(t=>{t.media=Array.isArray(t.media)?t.media:[];t.deadline=t.deadline||'';t.feedbackFocus=typeof t.feedbackFocus==='string'?t.feedbackFocus:'';});return state;}
 
 export function validateFeedbackIssue(choice,ids,bugs,testId){
  if(!['none','reported','new'].includes(choice))return '문제 발견 여부를 선택해 주세요.';

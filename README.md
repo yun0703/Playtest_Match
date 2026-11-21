@@ -75,7 +75,9 @@ VITE_SUPABASE_PUBLISHABLE_KEY
 
 ## 소셜 로그인 설정
 
-로그인 화면은 Google / 네이버와 이메일 가입을 제공합니다. 최초 소셜 로그인은 Supabase 회원을 생성하며 별도 비밀번호를 요구하지 않습니다. `/api/auth/providers`는 연결이 준비된 로그인 방식만 활성화합니다. Google은 Supabase의 공개 활성화 상태, 네이버는 서버 설정 및 `NAVER_AUTH_ENABLED=true`를 확인합니다. 네이버는 실제 로그인 검증 후 해당 플래그를 켭니다.
+로그인 화면은 Google / 네이버와 이메일 가입을 제공합니다. 최초 소셜 로그인은 Supabase 회원을 생성하며 별도 비밀번호를 요구하지 않습니다. `/api/auth/providers`는 연결이 준비된 로그인 방식만 활성화합니다. Google은 Supabase의 공개 활성화 상태, 네이버는 서버 설정 및 `NAVER_AUTH_ENABLED=true`를 확인합니다. 설정 완료 후 플래그를 켜 실제 로그인 왕복을 검증합니다.
+
+2026-11-21 Google / 네이버의 실제 계정 로그인과 사이트 복귀를 확인했습니다. Google 앱은 현재 테스트 모드이며 등록된 테스트 계정으로 검증했습니다. 일반 공개에 필요한 브랜딩 정보가 아직 완성되지 않았습니다. 네이버 앱은 개발 중 상태로 일반 사용자 공개에는 검수가 필요합니다.
 
 Google Cloud 프로젝트의 OAuth 웹 클라이언트에서 자바스크립트 원본을 `https://playtest-match.vercel.app`, 승인된 리디렉션 URI를 `https://hrqpclwzhzpgbyhkkswx.supabase.co/auth/v1/callback`으로 설정합니다. Client ID와 Secret은 Supabase Google 제공자 설정에만 입력합니다.
 
@@ -103,5 +105,6 @@ Supabase Custom Provider는 다음과 같이 설정합니다.
 - `supabase/security-tests.sql`: 롤백 기반 실제 DB 통합 검사(익명 정보 분리, 소유권, 승인, 모집 인원, 버그 권한, 설문 연결, 중복 제출, 운영자 권한)
 - `supabase/member-tests.sql`: 롤백 기반 소셜 표시 이름, 한 회원의 참여·등록 동시 이용, 운영자 권한 분리 검사
 - `node scripts/test-cloud-anonymous.mjs`: 실제 공개 API로 snapshot / 비공개 테이블 / 익명 변경 / 비공개 파일 접근 차단 검사. `.env.local` 필요
+- `node scripts/test-social-public.mjs`: 운영 소셜 제공자 활성 상태, 잘못된 state·클라이언트·토큰 요청 차단 검사
 
 로컬 QA 이미지와 영상은 Git에 포함하지 않습니다. 기본 이미지 생성 프롬프트와 출처는 `ARTWORK.md`를 참고하세요. 실제 게임 스크린샷이 아닌 기본 콘셉트 아트에는 예시 표기를 유지합니다.
