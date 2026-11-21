@@ -3,7 +3,12 @@ import {accountHtml,authErrorMessage,oauthRequest,SOCIAL_PROVIDERS} from './acco
 export function cloudConfiguration(env){const url=env.VITE_SUPABASE_URL||'',key=env.VITE_SUPABASE_PUBLISHABLE_KEY||'';if(!url&&!key)return null;if(!/^https:\/\/[^/]+\.supabase\.co$/.test(url)||!key||key.startsWith('sb_secret_'))throw new Error('Supabase 공개 연결 설정을 확인해 주세요.');return {url,key};}
 export async function createCloud(env){
  const config=cloudConfiguration(env);if(!config)return null;
- const client=createClient(config.url,config.key,{auth:{flowType:'pkce'}});
+ const client=createClient(config.url,config.key,{auth:{flowType:'pkce'},global:{fetch:(input,options={})=>{
+  const url=typeof input==='string'?input:input.url||String(input);
+  if(!url.includes('/auth/v1/'))return fetch(input,options);
+  const timeout=AbortSignal.timeout(12000),signal=options.signal?AbortSignal.any([options.signal,timeout]):timeout;
+  return fetch(input,{...options,signal});
+ }}});
  const currentUrl=new URL(location.href),callbackError=currentUrl.searchParams.has('error')||new URLSearchParams(currentUrl.hash.slice(1)).has('error');
  const {data:{session},error}=await client.auth.getSession();if(error&&!callbackError)throw error;
  let user=session?.user||null,viewer={},providers={google:false,naver:false},authStatus=callbackError?authErrorMessage({code:'access_denied'}):'';
@@ -25,7 +30,7 @@ export async function createCloud(env){
    async function loadProviders(){
     try{const response=await fetch('/api/auth/providers',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!response.ok)throw new Error();const data=await response.json();providers={google:data.google===true,naver:data.naver===true};}catch{providers={google:false,naver:false};}
     if(disposed)return;
-    root.querySelectorAll('[data-social]').forEach(button=>{const enabled=providers[button.dataset.social];button.disabled=!enabled;button.querySelector('small')?.remove();if(!enabled){const note=document.createElement('small');note.textContent='연결 준비 중';button.append(note);}});
+    root.querySelectorAll('[data-social]').forEach(button=>{const enabled=providers[button.dataset.social];button.disabled=manualAuth||!enabled;button.querySelector('small')?.remove();if(!enabled){const note=document.createElement('small');note.textContent='연결 준비 중';button.append(note);}});
    }
    async function submit(event){
     const form=event.target.closest('[data-account-form]');if(!form)return;event.preventDefault();if(manualAuth||!form.reportValidity())return;
@@ -46,13 +51,13 @@ export async function createCloud(env){
      try{const data=checked(await client.auth.signInWithOAuth(oauthRequest(social,location.origin)));const destination=new URL(data.url);if(destination.origin!==config.url||destination.pathname!=='/auth/v1/authorize')throw new Error();location.assign(destination.href);}
      catch(error){status(authErrorMessage(error));manualAuth=false;busy(false);}return;
     }
-    try{if(action==='providers'){await loadProviders();return;}if(action==='logout'){manualAuth=true;checked(await client.auth.signOut());user=null;viewer={};await onRefresh(true);render();}else {await onRefresh(false);render();}}
+    try{if(action==='providers'){await loadProviders();return;}if(action==='logout'){manualAuth=true;const result=await client.auth.signOut({scope:'local'});if(result.error&&user)throw result.error;user=null;viewer={};await onRefresh(true);render();}else {await onRefresh(false);render();}}
     catch(error){if(user)window.alert(authErrorMessage(error));else status(authErrorMessage(error));}finally{manualAuth=false;}
    }
    render();root.addEventListener('submit',submit);root.addEventListener('click',click);void loadProviders();
    const {data:{subscription}}=client.auth.onAuthStateChange((event,nextSession)=>{
     const previous=user?.id;user=nextSession?.user||null;const changed=previous!==user?.id;if(changed)viewer={};
-    if(manualAuth||disposed||(!changed&&event!=='USER_UPDATED'))return;
+    if((manualAuth&&event!=='SIGNED_OUT')||disposed||(!changed&&event!=='USER_UPDATED'))return;
     // Leave the SDK's auth lock before issuing another authenticated request.
     clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{if(disposed)return;render();try{await onRefresh(changed);render();}catch(error){status(authErrorMessage(error));}},0);
    });

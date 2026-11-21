@@ -84,7 +84,7 @@ Google Cloud 프로젝트의 OAuth 웹 클라이언트에서 자바스크립트 
 Supabase Custom Provider는 다음과 같이 설정합니다.
 
 - Identifier: `naver` (SDK 식별자: `custom:naver`)
-- Configuration: Manual OAuth2, PKCE 사용
+- Configuration: Manual OAuth2, PKCE 사용, Issuer URL: `https://nid.naver.com`
 - Client ID / Secret: 네이버 앱의 값
 - Authorization URL: `https://playtest-match.vercel.app/api/auth/naver/authorize`
 - Token URL: `https://playtest-match.vercel.app/api/auth/naver/token`
