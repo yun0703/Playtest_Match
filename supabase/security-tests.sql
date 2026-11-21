@@ -4,7 +4,7 @@ declare owner_id uuid=gen_random_uuid();tester_id uuid=gen_random_uuid();outside
 begin
  insert into auth.users(id,aud,role,raw_user_meta_data) values(owner_id,'authenticated','authenticated','{"nickname":"QA owner"}'),(tester_id,'authenticated','authenticated','{"nickname":"QA tester"}'),(outsider,'authenticated','authenticated','{"nickname":"QA outsider"}');
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
- draft=jsonb_build_object('title','QA rollback test','team','QA','teaser','This is a rollback-only integration test.','feedbackFocus','Check server-side authorization and private build visibility.','genre','퍼즐','platform','WebGL','build','v1','minutes',15,'slots',1,'vis','approval','deadline','','link','https://example.com/private-build','how','Private play instructions for approved testers.','survey','[{"id":"q1","label":"Rating","type":"scale","required":true,"options":[]}]'::jsonb,'media','[]'::jsonb);
+ draft=jsonb_build_object('title','QA rollback test','team','QA','teaser','This is a rollback-only integration test.','feedbackFocus','Check server-side authorization and private build visibility.','genre','퍼즐','platform','WebGL','build','v1','minutes',15,'slots',1,'vis','approval','deadline',((now() at time zone 'Asia/Seoul')::date+1)::text,'link','https://example.com/private-build','how','Private play instructions for approved testers.','survey','[{"id":"q1","label":"Rating","type":"scale","required":true,"options":[]}]'::jsonb,'media','[]'::jsonb);
  snapshot=pt_command('save_test',jsonb_build_object('data',draft));id=snapshot->'tests'->0->>'id';
  if id is null then raise exception 'FAIL: create test';end if;
  perform set_config('request.jwt.claim.sub','',true);snapshot=pt_snapshot();

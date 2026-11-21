@@ -12,7 +12,7 @@ export function galleryHtml(test,selected){
  const active=items.find(item=>item.id===selected)||items.find(item=>item.cover)||items[0];
  return `<section class="game-gallery" id="detail-gallery" aria-label="게임 미디어"><h3>스크린샷 · 영상</h3><div class="gallery-stage">${fileView(active)}</div><div class="gallery-thumbs">${items.map((item,i)=>`<button type="button" data-act="media-select" data-id="${e(item.id)}" aria-pressed="${item.id===active.id}" aria-label="미디어 ${i+1}">${item.kind==='image'?fileView(item):'<span>▶ 영상</span>'}</button>`).join('')}</div></section>`;
 }
-export function deadlineHtml(test){const state=deadlineState(test.deadline);return `<div class="deadline-line ${state}" data-deadline-test="${e(test.id)}"><span>피드백 마감</span><strong>${test.deadline?e(test.deadline):'<span>마감일 없음</span>'}</strong>${state==='soon'?'<span class="badge b-pending">48시간 이내 마감</span>':state==='overdue'?'<span class="badge b-rejected">기한 지남</span>':''}${test.deadline?'<small>KST · 23:59</small>':''}</div>`;}
+export function deadlineHtml(test){const state=deadlineState(test.deadline);return `<div class="deadline-line ${state}" data-deadline-test="${e(test.id)}"><span>피드백 마감</span><strong>${test.deadline?e(test.deadline):'<span>마감일 확인 필요</span>'}</strong>${state==='soon'?'<span class="badge b-pending">48시간 이내 마감</span>':state==='overdue'?'<span class="badge b-rejected">기한 지남</span>':''}${test.deadline?'<small>KST · 23:59</small>':''}</div>`;}
 export function progressHtml(test,application){
  const step=participationStep(application);
  if(!step)return '';

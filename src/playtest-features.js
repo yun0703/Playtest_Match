@@ -12,6 +12,19 @@ export function capacityValidation(slots,deadline,applicants=0){
 }
 export function seoulDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function dateAfterDays(days,now=new Date()){return seoulDate(new Date(now.getTime()+days*86400000));}
+export function maximumDeadline(createdDate=seoulDate()){
+ const [year,month,day]=createdDate.split('-').map(Number);
+ const target=new Date(Date.UTC(year,month+1,1));
+ const lastDay=new Date(Date.UTC(target.getUTCFullYear(),target.getUTCMonth()+1,0)).getUTCDate();
+ target.setUTCDate(Math.min(day,lastDay));
+ return target.toISOString().slice(0,10);
+}
+export function deadlineValidation(date,createdDate,previousDeadline='',today=seoulDate()){
+ if(!date)return '모든 테스트에 마감일을 설정해 주세요.';
+ if(!Number.isFinite(deadlineTime(date))||(date<today&&date!==previousDeadline))return '마감일은 오늘 이후의 올바른 날짜로 선택해 주세요.';
+ return date>maximumDeadline(createdDate||today)?'마감일은 최초 등록일부터 최대 두 달 이내로 설정해 주세요.':'';
+}
+export const recruitmentOpen=(test,now=Date.now())=>test.status==='open'&&Number.isFinite(deadlineTime(test.deadline))&&deadlineTime(test.deadline)>=now;
 export function deadlineTime(date){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return NaN;
  const time=Date.parse(`${date}T23:59:59.999+09:00`);

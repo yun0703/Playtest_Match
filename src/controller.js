@@ -1,4 +1,4 @@
-import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES,unlimitedCapacity,capacityFull,remainingCapacity,capacityValidation} from './playtest-features.js';
+import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES,unlimitedCapacity,capacityFull,remainingCapacity,capacityValidation,maximumDeadline,deadlineValidation,recruitmentOpen} from './playtest-features.js';
 import {validateMedia,stageMedia,saveMedia,removeMedia,mediaMetadata,releaseStaged,createMediaHydrator} from './media-store.js';
 import {fileView,mediaEditor,galleryHtml,deadlineHtml,progressHtml,bugFormHtml,bugListHtml,notificationsHtml,focusHtml,problemChoiceHtml} from './feature-views.js';
 export function initialize({cloud=null,initialState=null}={}){
@@ -125,7 +125,7 @@ function renderNotifications(){const el=$('#notification-area');if(el){const ope
 function clearUploads(){releaseStaged((ui.mediaDraft||[]).filter(x=>x.file));releaseStaged(ui.bugMedia);ui.mediaDraft=null;ui.bugMedia=[];}
 function updateMediaEditor(){const el=$('#media-preview');if(el){el.innerHTML=mediaEditor(ui.mediaDraft||[]);mediaHydrator.hydrate(el);}}
 function updateBugPreview(){const el=$('#bug-preview');if(el)el.innerHTML=ui.bugMedia.map(x=>fileView(x,{preview:true})+`<button class="text-link" type="button" data-act="bug-file-remove">삭제</button>`).join('');}
-function refreshDeadlines(){renderNotifications();const main=$('#main');if(main?.querySelectorAll)main.querySelectorAll('[data-deadline-test]').forEach(el=>{const test=byId(el.dataset.deadlineTest);if(test)el.outerHTML=deadlineHtml(test);});}
+function refreshDeadlines(){renderNotifications();const main=$('#main');if(main?.querySelectorAll)main.querySelectorAll('[data-deadline-test]').forEach(el=>{const test=byId(el.dataset.deadlineTest);if(test)el.outerHTML=deadlineHtml(test);});if((ui.page==='home'||ui.page==='tester'&&ui.tTab==='open')&&main?.querySelector?.('.deadline-line.overdue'))render(false);}
 
 const tBadge=s=>`<span class="badge b-${TBADGE[s]}">${TSTATUS[s]}</span>`;
 const visBadge=v=>`<span class="badge b-vis">${VIS[v]||VIS.public}</span>`;
@@ -165,7 +165,7 @@ function filteredTests(list){
 }
 function catalogTools(){return `<div class="catalog-tools"><form data-form="search" class="search-form"><label class="sr-only" for="game-search">게임 검색</label><input id="game-search" type="search" name="search" value="${esc(ui.search)}" placeholder="게임, 개발팀 검색" autocomplete="off"><button type="submit" aria-label="검색">⌕</button></form><div class="catalog-selects"><label class="sr-only" for="platform-filter">플랫폼</label><select id="platform-filter"><option value="all" ${ui.platform==='all'?'selected':''}>모든 플랫폼</option>${PLATFORMS.map(p=>`<option value="${p}" ${ui.platform===p?'selected':''}>${p}</option>`).join('')}</select><label class="sr-only" for="sort-filter">정렬</label><select id="sort-filter">${[['default','등록 순'],['new','최근 등록 순'],['short','짧은 플레이 시간 순'],['seats','남은 자리 많은 순']].map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${l}</option>`).join('')}</select></div></div>`;}
 function renderHome(){
- const tests=S.tests.filter(t=>t.status==='open');
+ const tests=S.tests.filter(t=>recruitmentOpen(t));
  const featured=tests.find(t=>t.id===ui.featured)||tests[0];
  const list=filteredTests(tests);
  return `<div class="store-layout"><aside class="store-sidebar"><h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임 <span>${tests.length}</span></button><h3>장르</h3>${GENRES.map(g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}">${g}<span>${tests.filter(t=>t.genre===g).length}</span></button>`).join('')}<div class="sidebar-note"><h3>게임을 만들고 있나요?</h3><p>첫 빌드를 공개하고<br>플레이어의 의견을 모아보세요.</p><a href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div></aside><div class="store-content"><div class="store-title"><div><span class="page-kicker">PLAYTEST MATCH</span><h1>인디게임 플레이테스트</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p></div><a class="btn" href="#developer" data-nav="developer" data-sub="new">+ 테스트 등록</a></div>
@@ -181,7 +181,7 @@ function slotsHtml(t){
 }
 function renderTester(){
   if(ui.detail){const d=byId(ui.detail);if(d&&visibleTo(d))return renderDetail(d)}
-  const open=S.tests.filter(t=>t.status==='open');
+  const open=S.tests.filter(t=>recruitmentOpen(t));
   const mineList=S.tests.filter(t=>S.mine[t.id]);
   const genres=['전체',...GENRES.filter(g=>open.some(t=>t.genre===g))];
   const list=filteredTests(ui.tTab==='mine'?mineList:open);
@@ -312,6 +312,7 @@ function devForm(){
   const opts=(arr,cur)=>arr.map(x=>`<option value="${esc(x)}" ${x===cur?'selected':''}>${x}</option>`).join('');
   const curVis=e?e.vis:'public';
   const hid=e&&e.status==='hidden';
+  const deadlineMax=maximumDeadline(e?.createdDate||today());
   return `<div class="panel" id="dev-form"><h2>${e?'테스트 수정':'새 테스트 등록'}</h2>
     ${hid?`<p class="reason">숨김 사유: ${esc(e.reason||'')}</p>`:''}
     <p class="notice">${hid?'수정을 저장하면 운영자에게 재공개 요청이 전달됩니다.':e?'수정 내용은 바로 반영됩니다.':'등록하면 바로 공개됩니다. 사전 심사는 없고, 신고가 접수되면 운영자가 확인합니다.'}</p>
@@ -324,7 +325,7 @@ function devForm(){
         <div class="field"><label for="f-build">빌드 버전</label><input type="text" id="f-build" value="${e?esc(e.build):'v0.1.0'}" maxlength="16"></div>
         <div class="field"><label for="f-min">예상 소요 시간 (분)</label><input type="number" id="f-min" min="5" max="120" value="${e?e.minutes:20}"></div>
         <div class="field"><label for="f-slots">모집 인원</label><input type="number" id="f-slots" min="1" max="50" step="1" value="${e?.slots??5}" ${e&&unlimitedCapacity(e)?'disabled':''} aria-describedby="capacity-hint"><label class="check"><input type="checkbox" id="f-unlimited" ${e&&unlimitedCapacity(e)?'checked':''}><span>인원 제한 없음</span></label><span class="hint" id="capacity-hint">인원 지정 시 1~50명 · 제한이 없으면 마감일까지 신청을 받습니다.</span></div>
-        <div class="field"><label for="f-deadline">모집·피드백 마감일</label><input type="date" id="f-deadline" value="${e?esc(e.deadline):dateAfterDays(7)}" ${e&&unlimitedCapacity(e)?'required':''} aria-describedby="deadline-hint"><span class="hint" id="deadline-hint">${e&&unlimitedCapacity(e)?'인원 제한 없음: 마감일 필수 · 한국 시간 23:59까지 모집':'선택한 날짜의 한국 시간 23:59까지 · 비워두면 기한 없음'}</span></div>
+        <div class="field"><label for="f-deadline">모집·피드백 마감일</label><input type="date" id="f-deadline" value="${e?esc(e.deadline||deadlineMax):dateAfterDays(7)}" min="${e?.deadline&&e.deadline<today()?esc(e.deadline):today()}" max="${deadlineMax}" required aria-describedby="deadline-hint"><span class="hint" id="deadline-hint">모든 테스트 필수 · 최초 등록일부터 최대 두 달 · 한국 시간 23:59 마감</span></div>
       </div></fieldset>
       <fieldset class="group"><legend>스크린샷 · 영상</legend><p class="hint">스크린샷 최대 6장(각 5MB), 영상 최대 1개(50MB). 공개 소개에 표시됩니다.</p><label for="f-media">미디어 파일 추가</label><input id="f-media" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"><p class="hint">PNG · JPG · WebP · GIF / MP4 · WebM</p><p id="media-error" class="err" role="alert"></p><div id="media-preview">${mediaEditor(ui.mediaDraft)}</div></fieldset>
       <fieldset class="group"><legend>공개 설정</legend>
@@ -555,8 +556,6 @@ listen(document,'change',e=>{
   }
   if(e.target.id==='f-unlimited'){
     $('#f-slots').disabled=e.target.checked;
-    $('#f-deadline').required=e.target.checked;
-    $('#deadline-hint').textContent=e.target.checked?'인원 제한 없음: 마감일 필수 · 한국 시간 23:59까지 모집':'선택한 날짜의 한국 시간 23:59까지 · 비워두면 기한 없음';
   }
   if(e.target.classList&&e.target.classList.contains('q-type')){syncDraft();renderSurvey()}
 });
@@ -645,7 +644,8 @@ listen(document,'submit',async e=>{
     const d={title:g('f-title'),team:g('f-team'),genre:g('f-genre'),platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:$('#f-unlimited').checked?null:+g('f-slots'),
       feedbackFocus:g('f-focus'),deadline:g('f-deadline'),vis:g('f-vis'),code:g('f-code').toUpperCase(),teaser:g('f-teaser'),link:g('f-link'),how:g('f-how')};
     if((!ui.edit||d.feedbackFocus)&& (d.feedbackFocus.length<10||d.feedbackFocus.length>600)){err.textContent='확인할 점은 10~600자로 입력해 주세요.';return;}
-    if(d.deadline&&(!Number.isFinite(deadlineTime(d.deadline))||(d.deadline<today()&&d.deadline!==byId(ui.edit)?.deadline))){err.textContent='마감일은 오늘 이후의 올바른 날짜로 선택해 주세요.';return}
+    const deadlineError=deadlineValidation(d.deadline,byId(ui.edit)?.createdDate||today(),byId(ui.edit)?.deadline);
+    if(deadlineError){err.textContent=deadlineError;return;}
     if(!d.title||!d.team){err.textContent='게임 이름과 팀 이름을 입력해 주세요.';return}
     if(d.teaser.length<8){err.textContent='공개 소개를 8자 이상 적어 주세요.';return}
     if(d.vis==='invite'){if(!/^[A-Z0-9]{4,12}$/.test(d.code)){err.textContent='초대 코드는 영문과 숫자 4~12자로 입력해 주세요.';return}}else{d.code=''}
@@ -678,7 +678,7 @@ listen(document,'submit',async e=>{
       const t=byId(ui.edit),was=t.status;Object.assign(t,d);
       if(was==='hidden'){t.status='appeal';msg='수정했습니다. 운영자가 재공개 여부를 검토합니다.'}else msg='수정 내용을 저장했습니다.';
     }else{
-      S.tests.push(Object.assign({id:'t'+Date.now(),owner:'me',status:'open',applicants:0,feedbacks:[],requests:[]},d));
+      S.tests.push(Object.assign({id:'t'+Date.now(),createdDate:today(),owner:'me',status:'open',applicants:0,feedbacks:[],requests:[]},d));
       msg='등록했습니다. 테스트가 바로 공개되었습니다.';
     }
     if(!save()){S=oldState;ui.saving=false;if(submit)submit.disabled=false;await removeMedia(pending.map(m=>m.id)).catch(()=>{});return;}
