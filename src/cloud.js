@@ -1,5 +1,5 @@
 import {createClient} from '@supabase/supabase-js';
-import {accountHtml,authErrorMessage,oauthRequest,SOCIAL_PROVIDERS} from './account.js';
+import {accountHtml,authErrorMessage,oauthRequest,SOCIAL_PROVIDERS,socialAvailabilityNote} from './account.js';
 export function cloudConfiguration(env){const url=env.VITE_SUPABASE_URL||'',key=env.VITE_SUPABASE_PUBLISHABLE_KEY||'';if(!url&&!key)return null;if(!/^https:\/\/[^/]+\.supabase\.co$/.test(url)||!key||key.startsWith('sb_secret_'))throw new Error('Supabase 공개 연결 설정을 확인해 주세요.');return {url,key};}
 export async function createCloud(env){
  const config=cloudConfiguration(env);if(!config)return null;
@@ -28,8 +28,9 @@ export async function createCloud(env){
    function render(){if(disposed)return;const open=root.querySelector('.account-menu')?.open;root.innerHTML=accountHtml(user,viewer,providers,authStatus);if(open||authStatus)root.querySelector('.account-menu')?.setAttribute('open','');}
    function busy(value){root.querySelectorAll('[data-account-form] button,[data-social]').forEach(button=>{button.disabled=value||Boolean(button.dataset.social&&!providers[button.dataset.social]);});}
    async function loadProviders(){
-    try{const response=await fetch('/api/auth/providers',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!response.ok)throw new Error();const data=await response.json();providers={google:data.google===true,naver:data.naver===true};}catch{providers={google:false,naver:false};}
+    try{const response=await fetch('/api/auth/providers',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!response.ok)throw new Error();const data=await response.json();providers={google:data.google===true,naver:data.naver===true,testMode:data.testMode!==false};}catch{providers={google:false,naver:false};}
     if(disposed)return;
+    const note=document.getElementById('social-availability');if(note)note.textContent=socialAvailabilityNote(providers);
     root.querySelectorAll('[data-social]').forEach(button=>{const enabled=providers[button.dataset.social];button.disabled=manualAuth||!enabled;button.querySelector('small')?.remove();if(!enabled){const note=document.createElement('small');note.textContent='연결 준비 중';button.append(note);}});
    }
    async function submit(event){

@@ -10,7 +10,7 @@ for(const [path,status,options] of [
  const response=await fetch(origin+path,{...options,redirect:'manual',signal:AbortSignal.timeout(15000)});
  assert.equal(response.status,status,path);assert.match(response.headers.get('cache-control')||'',/no-store/);
  const data=await response.json();
- if(path.endsWith('providers')){assert.equal(typeof data.google,'boolean');assert.equal(typeof data.naver,'boolean');assert.deepEqual(Object.keys(data).sort(),['google','naver']);console.log('Public provider availability:',data);}
+ if(path.endsWith('providers')){assert.equal(typeof data.google,'boolean');assert.equal(typeof data.naver,'boolean');assert.equal(typeof data.testMode,'boolean');assert.deepEqual(Object.keys(data).sort(),['google','naver','testMode']);console.log('Public provider availability:',data);}
  else assert.ok(data.error,path);
  console.log('PASS',path.split('?')[0],status);
 }

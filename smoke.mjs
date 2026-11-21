@@ -25,6 +25,7 @@ await handlers.click({target:{closest:selector=>selector==='[data-act]'?{dataset
 if(!elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Member cannot publish');
 cloud.user=null;
 await refreshAccount(true);
+if(location.hash!=='#home')throw Error('Signed-out route disagrees with the screen');
 if(elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Developer form survived sign-out');
 if(!elements.get('#main').innerHTML.includes('인디게임 플레이테스트'))throw Error('Signed-out page did not render');
 disposeCloud();

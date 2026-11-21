@@ -334,6 +334,7 @@ export default {
   "Google로 계속하기": "Continue with Google",
   "네이버로 계속하기": "Continue with Naver",
   "연결 준비 중": "Coming soon",
+  "소셜 로그인은 현재 등록된 테스트 계정으로 운영 중입니다.": "Social sign-in currently supports registered test accounts.",
   "처음 소셜 로그인하면 회원가입도 함께 진행됩니다.": "Your first social sign-in also creates your account.",
   "또는 이메일로 계속하기": "Or continue with email",
   "로그인 연결 상태 다시 확인": "Check sign-in availability",

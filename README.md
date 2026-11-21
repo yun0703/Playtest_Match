@@ -79,6 +79,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY
 
 2026-11-21 Google / 네이버의 실제 계정 로그인과 사이트 복귀를 확인했습니다. Google 앱은 현재 테스트 모드이며 등록된 테스트 계정으로 검증했습니다. 일반 공개에 필요한 브랜딩 정보가 아직 완성되지 않았습니다. 네이버 앱은 개발 중 상태로 일반 사용자 공개에는 검수가 필요합니다.
 
+로그인 화면에도 테스트 계정 운영 안내를 표시합니다. 두 서비스의 일반 공개를 마친 뒤에만 Vercel의 `SOCIAL_AUTH_TEST_MODE=false`를 설정해 이 안내를 해제합니다.
+
 Google Cloud 프로젝트의 OAuth 웹 클라이언트에서 자바스크립트 원본을 `https://playtest-match.vercel.app`, 승인된 리디렉션 URI를 `https://hrqpclwzhzpgbyhkkswx.supabase.co/auth/v1/callback`으로 설정합니다. Client ID와 Secret은 Supabase Google 제공자 설정에만 입력합니다.
 
 네이버 앱에서는 이용자 식별자와 별명만 요청합니다. 서비스 URL은 `https://playtest-match.vercel.app`, Callback URL은 `https://playtest-match.vercel.app/api/auth/naver/callback`입니다. Vercel 서버 환경 변수에 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`을 설정합니다. 이 값들을 `VITE_` 변수나 Git에 넣지 마세요.

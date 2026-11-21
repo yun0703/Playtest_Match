@@ -10,6 +10,8 @@ assert.ok(!member.includes('#admin'));
 assert.ok(accountHtml({...user,user_metadata:{name:'<img onerror=evil>'}}).includes('&lt;img'));
 const ready=accountHtml(null,{}, {google:true,naver:false});
 assert.match(ready,/data-social="google" >/);assert.match(ready,/data-social="naver" disabled/);
+assert.ok(ready.includes('등록된 테스트 계정'));
+assert.ok(!accountHtml(null,{}, {google:true,testMode:false}).includes('등록된 테스트 계정'));
 assert.equal(oauthRequest('google','https://playtest-match.vercel.app/?next=https://evil.example').options.redirectTo,'https://playtest-match.vercel.app');
 assert.equal(oauthRequest('naver','https://playtest-match.vercel.app').provider,'custom:naver');
 assert.throws(()=>oauthRequest('unknown','https://playtest-match.vercel.app'));
