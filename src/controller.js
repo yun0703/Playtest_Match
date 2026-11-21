@@ -684,7 +684,7 @@ let disposeAccount;
 if(cloud){
  const footer=document.querySelector('footer p');if(footer)footer.textContent='PlayTest Match · 개발자와 플레이어가 함께 만드는 게임.';
  document.querySelector('footer [data-act="reset"]')?.remove();
- disposeAccount=cloud.mountAccount(async reset=>{if(reset){clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();}S=migrateFeatures(await cloud.snapshot());render();});
+ disposeAccount=cloud.mountAccount(async reset=>{if(reset){clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());render();});
 }
 const h0=hashPage();if(h0)ui.page=h0;
 render();
