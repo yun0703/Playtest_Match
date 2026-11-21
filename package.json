@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "node scripts/build.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node smoke.mjs && node preferences.test.mjs && node features.test.mjs && node account.test.mjs"
+    "test": "node smoke.mjs && node preferences.test.mjs && node features.test.mjs && node account.test.mjs && node account-lifecycle.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.1",

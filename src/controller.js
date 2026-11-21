@@ -114,7 +114,7 @@ function save(){if(cloud)throw new Error('서버 모드에서 로컬 변경은 �
 
 let S=migrateFeatures(cloud?initialState:load());
 let mediaHydrator=createMediaHydrator();
-const ui={feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'open',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
+const ui={cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'open',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=u=>/^https?:\/\//i.test(u||'')?u:'';
@@ -245,7 +245,8 @@ function renderDetail(t){
   }else{
     side=`<div class="panel"><h3>설문을 제출했습니다</h3><p class="muted">참여해 주셔서 감사합니다. 개발자가 결과를 확인합니다.</p></div>`;
   }
-  return `<button class="back" type="button" data-act="back">← 목록으로</button><div class="cols"><div class="stack">${info}</div><div class="col-side">${side}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
+  const cancellation=['waiting','applied'].includes(st)?`<section class="cancellation-panel">${ui.cancelApplication===t.id?`<p>신청을 취소하면 빌드와 설문 접근이 종료됩니다. 모집 중이면 다시 신청할 수 있습니다.</p><div class="actions"><button type="button" class="btn danger" data-act="confirm-cancellation" data-id="${t.id}">신청 취소 확정</button><button type="button" class="btn ghost" data-act="keep-application">참여 유지</button></div>`:`<button type="button" class="text-link" data-act="cancel-application" data-id="${t.id}">신청 취소</button>`}</section>`:'';
+  return `<button class="back" type="button" data-act="back">← 목록으로</button><div class="cols"><div class="stack">${info}</div><div class="col-side">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
 }
 
 /* ---------- developer ---------- */
@@ -475,6 +476,14 @@ listen(document,'click',async e=>{
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
   const a=b.dataset.act,id=b.dataset.id;
   if(cloud&&await handleCloudClick(a,b,e))return;
+  if(a==='cancel-application'){ui.cancelApplication=id;render(false);return;}
+  if(a==='keep-application'){ui.cancelApplication=null;render(false);return;}
+  if(a==='confirm-cancellation'){
+    if(cloud){if(await remoteCommand('cancel_application',{testId:id})){ui.cancelApplication=null;delete ui.feedbackDrafts[id];render(false);toast('신청을 취소했습니다.');}return;}
+    const t=byId(id),m=S.mine[id];if(!m||!['waiting','applied'].includes(m.status))return;
+    const previous=clone(S);if(m.status==='applied')t.applicants=Math.max(0,t.applicants-1);t.requests=t.requests.filter(r=>r.id!=='me');delete S.mine[id];
+    if(!save()){S=previous;return;}ui.cancelApplication=null;delete ui.feedbackDrafts[id];render(false);toast('신청을 취소했습니다.');return;
+  }
   if(a==='open-bug-from-survey'){captureFeedbackDraft();openBugFromSurvey();return;}
   if(a==='media-remove'){const removed=ui.mediaDraft.find(m=>m.id===id);if(removed?.file)releaseStaged([removed]);ui.mediaDraft=ui.mediaDraft.filter(m=>m.id!==id);if(!ui.mediaDraft.some(m=>m.cover)){const first=ui.mediaDraft.find(m=>m.kind==='image');if(first)first.cover=true;}updateMediaEditor();return;}
   if(a==='bug-file-remove'){releaseStaged(ui.bugMedia);ui.bugMedia=[];updateBugPreview();return;}
