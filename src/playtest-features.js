@@ -1,6 +1,15 @@
 export const DEADLINE_WINDOW=48*60*60*1000;
 export const BUG_STATUSES={new:'접수됨',review:'확인 중',planned:'수정 예정',fixed:'수정 완료',unreproduced:'재현 불가'};
 export const SEVERITIES={minor:'경미',normal:'보통',critical:'진행 불가'};
+// A null capacity means recruitment is limited by the deadline only.
+export const unlimitedCapacity=test=>test.slots===null;
+export const capacityFull=test=>!unlimitedCapacity(test)&&test.applicants>=test.slots;
+export const remainingCapacity=test=>unlimitedCapacity(test)?Infinity:test.slots-test.applicants;
+export function capacityValidation(slots,deadline,applicants=0){
+ if(slots===null)return Number.isFinite(deadlineTime(deadline))?'':'인원 제한이 없으면 마감일을 설정해 주세요.';
+ if(!Number.isInteger(slots)||slots<1||slots>50)return '모집 인원은 1~50명의 정수로 입력해 주세요.';
+ return slots<applicants?'참여자 수보다 모집 인원을 줄일 수 없습니다.':'';
+}
 export function seoulDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function dateAfterDays(days,now=new Date()){return seoulDate(new Date(now.getTime()+days*86400000));}
 export function deadlineTime(date){

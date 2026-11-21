@@ -1,4 +1,4 @@
-import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES} from './playtest-features.js';
+import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES,unlimitedCapacity,capacityFull,remainingCapacity,capacityValidation} from './playtest-features.js';
 import {validateMedia,stageMedia,saveMedia,removeMedia,mediaMetadata,releaseStaged,createMediaHydrator} from './media-store.js';
 import {fileView,mediaEditor,galleryHtml,deadlineHtml,progressHtml,bugFormHtml,bugListHtml,notificationsHtml,focusHtml,problemChoiceHtml} from './feature-views.js';
 export function initialize({cloud=null,initialState=null}={}){
@@ -153,13 +153,13 @@ function gameArt(t, hero=false){
  return `<div class="game-art art-${index===undefined?'new':index} ${hero?'hero-art':''}" role="img" aria-label="${esc(t.title)} 예시 게임 아트워크"><span class="art-caption">CONCEPT ART · 예시 이미지</span></div>`;
 }
 function gameCard(t){
- const m=S.mine[t.id],full=t.applicants>=t.slots||deadlineState(t.deadline)==='overdue';
+ const m=S.mine[t.id],full=capacityFull(t)||deadlineState(t.deadline)==='overdue';
  return `<article class="card game-card"><button class="cover-button" type="button" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><div class="card-body"><div class="row"><span class="genre-label">${esc(t.genre)}</span>${visBadge(t.vis)}</div><h3 data-no-translate>${esc(t.title)}</h3><p class="team" data-no-translate>${esc(t.team)}</p><p class="teaser" data-no-translate>${esc(t.teaser)}</p>${focusHtml(t,true)}<div class="card-meta"><span>${esc(t.platform)}</span><span>◷ ${t.minutes}분</span></div><div class="foot">${deadlineHtml(t)}${slotsHtml(t)}<button class="btn ghost card-join" type="button" data-act="open" data-id="${t.id}">${m?MINE_LABEL[m.status]:full?'모집 마감':'테스트 참여하기'} <span>→</span></button></div></div></article>`;
 }
 function filteredTests(list){
  let result=list.filter(t=>(ui.genre==='전체'||t.genre===ui.genre)&&(ui.platform==='all'||t.platform===ui.platform)&&(!ui.search||[t.title,t.team,t.teaser,t.genre,t.feedbackFocus].join(' ').toLocaleLowerCase().includes(ui.search.toLocaleLowerCase())));
  if(ui.sort==='short')result.sort((a,b)=>a.minutes-b.minutes);
- if(ui.sort==='seats')result.sort((a,b)=>(b.slots-b.applicants)-(a.slots-a.applicants));
+ if(ui.sort==='seats')result.sort((a,b)=>(remainingCapacity(b)-remainingCapacity(a))||0);
  if(ui.sort==='new')result.reverse();
  return result;
 }
@@ -175,7 +175,8 @@ function renderHome(){
 
 /* ---------- tester ---------- */
 function slotsHtml(t){
-  const full=t.applicants>=t.slots,pct=Math.min(100,Math.round(t.applicants/t.slots*100));
+  if(unlimitedCapacity(t))return `<div class="slots"><span class="badge b-public">인원 제한 없음</span><span class="mono">${t.applicants}명 참여</span></div>`;
+  const full=capacityFull(t),pct=Math.min(100,Math.round(t.applicants/t.slots*100));
   return `<div class="slots"><div class="bar ${full?'full':''}"><span style="width:${pct}%"></span></div><span class="mono">${t.applicants}/${t.slots}명</span></div>`;
 }
 function renderTester(){
@@ -210,7 +211,7 @@ function reportPanel(t){
       <div class="actions"><button class="btn" type="submit">신고 접수</button><button class="btn ghost" type="button" data-act="report-cancel">취소</button></div></form></div>`;
 }
 function renderDetail(t){
-  const m=S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',own=t.owner==='me',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=t.applicants>=t.slots,url=safeUrl(t.link);
+  const m=S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',own=t.owner==='me',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=capacityFull(t),url=safeUrl(t.link);
   const guarded=access
     ?`<div><h3>플레이 방법</h3><p style="margin-top:6px">${esc(t.how)}</p></div>
       <div><h3>이 설문에 답해 주세요</h3><ol class="qs" style="margin-top:6px">${t.survey.map(q=>`<li>${esc(q.label)} <span class="mono muted">${QTYPE[q.type]}</span></li>`).join('')}</ol></div>`
@@ -322,8 +323,8 @@ function devForm(){
         <div class="field"><label for="f-platform">플랫폼</label><select id="f-platform">${opts(PLATFORMS,e&&e.platform)}</select></div>
         <div class="field"><label for="f-build">빌드 버전</label><input type="text" id="f-build" value="${e?esc(e.build):'v0.1.0'}" maxlength="16"></div>
         <div class="field"><label for="f-min">예상 소요 시간 (분)</label><input type="number" id="f-min" min="5" max="120" value="${e?e.minutes:20}"></div>
-        <div class="field"><label for="f-slots">모집 인원</label><input type="number" id="f-slots" min="1" max="50" value="${e?e.slots:5}"></div>
-        <div class="field"><label for="f-deadline">피드백 마감일</label><input type="date" id="f-deadline" value="${e?esc(e.deadline):dateAfterDays(7)}"><span class="hint">선택한 날짜의 한국 시간 23:59까지 · 비워두면 기한 없음</span></div>
+        <div class="field"><label for="f-slots">모집 인원</label><input type="number" id="f-slots" min="1" max="50" step="1" value="${e?.slots??5}" ${e&&unlimitedCapacity(e)?'disabled':''} aria-describedby="capacity-hint"><label class="check"><input type="checkbox" id="f-unlimited" ${e&&unlimitedCapacity(e)?'checked':''}><span>인원 제한 없음</span></label><span class="hint" id="capacity-hint">인원 지정 시 1~50명 · 제한이 없으면 마감일까지 신청을 받습니다.</span></div>
+        <div class="field"><label for="f-deadline">모집·피드백 마감일</label><input type="date" id="f-deadline" value="${e?esc(e.deadline):dateAfterDays(7)}" ${e&&unlimitedCapacity(e)?'required':''} aria-describedby="deadline-hint"><span class="hint" id="deadline-hint">${e&&unlimitedCapacity(e)?'인원 제한 없음: 마감일 필수 · 한국 시간 23:59까지 모집':'선택한 날짜의 한국 시간 23:59까지 · 비워두면 기한 없음'}</span></div>
       </div></fieldset>
       <fieldset class="group"><legend>스크린샷 · 영상</legend><p class="hint">스크린샷 최대 6장(각 5MB), 영상 최대 1개(50MB). 공개 소개에 표시됩니다.</p><label for="f-media">미디어 파일 추가</label><input id="f-media" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"><p class="hint">PNG · JPG · WebP · GIF / MP4 · WebM</p><p id="media-error" class="err" role="alert"></p><div id="media-preview">${mediaEditor(ui.mediaDraft)}</div></fieldset>
       <fieldset class="group"><legend>공개 설정</legend>
@@ -512,7 +513,7 @@ listen(document,'click',async e=>{
     const t=byId(id),r=(t.requests||[]).find(x=>x.id===b.dataset.req);if(!r)return;
     if(a==='req-approve'){
       if(deadlineState(t.deadline)==='overdue')return toast('마감일이 지났습니다. 먼저 기한을 연장해 주세요.');
-      if(t.applicants>=t.slots)return toast('모집 인원이 가득 찼습니다.');
+      if(capacityFull(t))return toast('모집 인원이 가득 찼습니다.');
       r.status='approved';t.applicants++;
       if(r.id==='me'&&S.mine[t.id])S.mine[t.id].status='applied';
       save();render();return toast(`${r.name}님을 승인했습니다. 플레이 방법과 빌드 링크가 열립니다.`);
@@ -552,6 +553,11 @@ listen(document,'change',e=>{
     if(c)c.hidden=e.target.value!=='invite';
     if(d)d.textContent=VIS_DESC[e.target.value]||'';
   }
+  if(e.target.id==='f-unlimited'){
+    $('#f-slots').disabled=e.target.checked;
+    $('#f-deadline').required=e.target.checked;
+    $('#deadline-hint').textContent=e.target.checked?'인원 제한 없음: 마감일 필수 · 한국 시간 23:59까지 모집':'선택한 날짜의 한국 시간 23:59까지 · 비워두면 기한 없음';
+  }
   if(e.target.classList&&e.target.classList.contains('q-type')){syncDraft();renderSurvey()}
 });
 
@@ -577,7 +583,7 @@ listen(document,'submit',async e=>{
       if(!c||c!==String(t.code||'').toUpperCase()){err.textContent='초대 코드가 올바르지 않습니다.';return}
     }
     if(!$('#ap-agree').checked){err.textContent='이용 동의서에 동의해 주세요.';return}
-    if(t.applicants>=t.slots){err.textContent='모집이 마감되었습니다.';return}
+    if(capacityFull(t)){err.textContent='모집이 마감되었습니다.';return}
     t.requests=t.requests||[];
     if(t.vis==='approval'){
       t.requests.push({id:'me',name:'나(테스터)',status:'waiting',agreed:true});
@@ -636,7 +642,7 @@ listen(document,'submit',async e=>{
   if(f.dataset.form==='dev'){
     syncDraft();
     const g=id=>$('#'+id).value.trim(),err=$('#dev-err');
-    const d={title:g('f-title'),team:g('f-team'),genre:g('f-genre'),platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:+g('f-slots'),
+    const d={title:g('f-title'),team:g('f-team'),genre:g('f-genre'),platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:$('#f-unlimited').checked?null:+g('f-slots'),
       feedbackFocus:g('f-focus'),deadline:g('f-deadline'),vis:g('f-vis'),code:g('f-code').toUpperCase(),teaser:g('f-teaser'),link:g('f-link'),how:g('f-how')};
     if((!ui.edit||d.feedbackFocus)&& (d.feedbackFocus.length<10||d.feedbackFocus.length>600)){err.textContent='확인할 점은 10~600자로 입력해 주세요.';return;}
     if(d.deadline&&(!Number.isFinite(deadlineTime(d.deadline))||(d.deadline<today()&&d.deadline!==byId(ui.edit)?.deadline))){err.textContent='마감일은 오늘 이후의 올바른 날짜로 선택해 주세요.';return}
@@ -645,7 +651,9 @@ listen(document,'submit',async e=>{
     if(d.vis==='invite'){if(!/^[A-Z0-9]{4,12}$/.test(d.code)){err.textContent='초대 코드는 영문과 숫자 4~12자로 입력해 주세요.';return}}else{d.code=''}
     if(!safeUrl(d.link)){err.textContent='빌드 링크는 https:// 로 시작해야 합니다.';return}
     if(d.how.length<10){err.textContent='플레이 방법을 10자 이상 적어 주세요.';return}
-    if(!(d.minutes>=5)||!(d.slots>=1)){err.textContent='소요 시간과 모집 인원을 확인해 주세요.';return}
+    if(!Number.isInteger(d.minutes)||d.minutes<5||d.minutes>120){err.textContent='소요 시간과 모집 인원을 확인해 주세요.';return}
+    const capacityError=capacityValidation(d.slots,d.deadline,byId(ui.edit)?.applicants||0);
+    if(capacityError){err.textContent=capacityError;return;}
     if(!ui.draft||!ui.draft.length){err.textContent='설문 질문을 한 개 이상 만들어 주세요.';return}
     const sv=[];
     for(let i=0;i<ui.draft.length;i++){

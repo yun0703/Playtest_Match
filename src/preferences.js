@@ -3,6 +3,7 @@ export const PREFERENCE_KEY='playtest-match-preferences-v1';
 export function normalizePreferences(value){return {theme:value?.theme==='dark'?'dark':'light',language:value?.language==='en'?'en':'ko'};}
 export function readPreferences(storage){try{return normalizePreferences(JSON.parse(storage.getItem(PREFERENCE_KEY)));}catch{return normalizePreferences(null);}}
 const variableTranslations=[
+ [/^(\s*)(\d+)명 참여(\s*)$/,(_,a,n,b)=>`${a}${n} participants${b}`],
  [/^미디어 (\d+)$/,(_,n)=>`Media ${n}`],
  [/^(\s*)모집 중 (\d+)(\s*)$/,(_,a,n,b)=>`${a}Open ${n}${b}`],
  [/^(\s*)내 참여 (\d+)(\s*)$/,(_,a,n,b)=>`${a}My participation ${n}${b}`],

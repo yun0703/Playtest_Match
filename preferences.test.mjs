@@ -6,6 +6,8 @@ assert.deepEqual(readPreferences({getItem(){return '{bad';}}),{theme:'light',lan
 assert.deepEqual(readPreferences({getItem(){return JSON.stringify({theme:'dark',language:'en'});}}),{theme:'dark',language:'en'});
 assert.equal(translateText('모집 중 6','en'),'Open 6');
 assert.equal(translateText('3/8명','en'),'3/8 testers');
+assert.equal(translateText('103명 참여','en'),'103 participants');
+assert.equal(translateText('인원 제한 없음','en'),'No participant limit');
 assert.equal(translateText('질문 2 유형','en'),'Question 2: type');
 assert.equal(translateText('5점 척도 · 3건','en'),'5-point scale · 3 responses');
 assert.equal(translateText('질문 2번의 보기는 서로 다른 2~6개가 필요합니다.','en'),'Question 2 needs 2–6 distinct options.');
