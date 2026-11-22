@@ -54,10 +54,11 @@ export function bugValidation(data){
  if(!Object.hasOwn(SEVERITIES,data.severity))return '심각도를 선택해 주세요.';
  return '';
 }
-export function migrateFeatures(state){for(const key of ['tests','reports','log','bugs','notifications'])state[key]=Array.isArray(state[key])?state[key]:[];for(const key of ['mine','myReports','readNotifications'])state[key]=state[key]||{};state.tests.forEach(t=>{t.media=Array.isArray(t.media)?t.media:[];t.deadline=t.deadline||'';t.feedbackFocus=typeof t.feedbackFocus==='string'?t.feedbackFocus:'';});return state;}
+export function migrateFeatures(state){for(const key of ['tests','reports','log','bugs','notifications','bugSummaries','favorites'])state[key]=Array.isArray(state[key])?state[key]:[];for(const key of ['mine','myReports','readNotifications'])state[key]=state[key]||{};state.tests.forEach(t=>{t.media=Array.isArray(t.media)?t.media:[];t.deadline=t.deadline||'';t.feedbackFocus=typeof t.feedbackFocus==='string'?t.feedbackFocus:'';});return state;}
 
-export function validateFeedbackIssue(choice,ids,bugs,testId){
- if(!['none','reported','new'].includes(choice))return '문제 발견 여부를 선택해 주세요.';
+export function validateFeedbackIssue(choice,ids,bugs,testId,summaries=[]){
+ if(!['none','reported','existing','new'].includes(choice))return '문제 발견 여부를 선택해 주세요.';
+ if(choice==='existing'&&(!ids.length||ids.some(id=>!summaries.some(b=>b.id===id&&b.testId===testId))))return '연결할 기존 버그를 선택해 주세요.';
  if(choice==='new')return '새 버그 제보를 먼저 저장해 주세요. 설문 답변은 유지됩니다.';
  if(choice==='reported'&&(!ids.length||ids.some(id=>!bugs.some(b=>b.id===id&&b.testId===testId&&b.testerId==='me'))))return '연결할 내 버그 제보를 선택해 주세요.';
  return '';

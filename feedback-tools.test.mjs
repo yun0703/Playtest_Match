@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {buildVersions,filterBuild,feedbackQuestions,similarBugs,versionValue} from './src/feedback-tools.js';
+import {duplicateBugHtml,sharedBugOptionsHtml} from './src/feature-views.js';
+import {validateFeedbackIssue,migrateFeatures} from './src/playtest-features.js';
+import {surveyCsv,bugsCsv} from './src/result-export.js';
+const test={id:'game',owner:'me',title:'버전 테스트',build:'v2',builds:['v1','v2','all'],survey:[{id:'q',type:'text',label:'변경된 질문',options:[]}],feedbacks:[{build:'v1',answers:{q:4},surveySnapshot:[{id:'q',type:'scale',label:'첫 질문',options:[]}]},{build:'v2',answers:{q:'의견'}},{answers:{old:'과거 응답'}}]};
+assert.deepEqual(buildVersions(test),['v2','v1','all']);assert.equal(filterBuild(test.feedbacks,versionValue('v1')).length,1);assert.equal(filterBuild(test.feedbacks,'legacy').length,1);assert.equal(filterBuild([{build:'all'}],versionValue('all')).length,1);
+const groups=feedbackQuestions(test,test.feedbacks);assert.equal(groups.length,3);assert.equal(groups[0].question.label,'첫 질문');assert.equal(groups[0].question.type,'scale');assert.equal(groups[1].question.label,'변경된 질문');assert.equal(groups[2].question.label,'삭제된 문항');
+const summaries=[{id:'b',testId:'game',build:'v1',title:'설정 화면에서 게임 멈춤',status:'new',own:false},{id:'x',testId:'other',build:'v1',title:'설정 화면에서 게임 멈춤',status:'new'},{id:'v2',testId:'game',build:'v2',title:'설정 화면에서 게임 멈춤',status:'fixed'}];
+assert.deepEqual(similarBugs('설정화면에서 게임멈춤!',summaries,'game','v1').map(b=>b.id),['b']);assert.equal(similarBugs('설정',summaries,'game','v1').length,0);assert.equal(similarBugs('게임 종료 시 소리가 두 번 나요',summaries,'game','v1').length,0);
+assert.equal(validateFeedbackIssue('existing',['b'],[],'game',summaries),'');assert.ok(validateFeedbackIssue('existing',['x'],[],'game',summaries));assert.ok(validateFeedbackIssue('reported',['b'],[],'game',summaries));
+const options=sharedBugOptionsHtml(test,summaries,'v1');assert.ok(options.includes('value="b"'));assert.ok(!options.includes('value="x"'));assert.ok(!options.includes('value="v2"'));
+assert.ok(!duplicateBugHtml('설정 화면에서 게임 멈춤',summaries,'game','v1').includes('testId'));
+assert.ok(surveyCsv(test,versionValue('v1')).includes('첫 질문'));assert.ok(!surveyCsv(test,versionValue('v1')).includes('변경된 질문'));assert.ok(surveyCsv(test,'legacy').includes('버전 미기록'));assert.ok(!bugsCsv(test,summaries,versionValue('v1')).includes('"v2"'));
+const state=migrateFeatures({tests:[]});assert.deepEqual(state.favorites,[]);assert.deepEqual(state.bugSummaries,[]);
+console.log('PASS version grouping and survey snapshots, legacy handling, duplicate suggestions, shared-link boundaries, and filtered CSV');
