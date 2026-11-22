@@ -1,3 +1,4 @@
+import {GENRES} from './genres.js';
 import translations from './translations.js';
 export const PREFERENCE_KEY='playtest-match-preferences-v1';
 export function normalizePreferences(value){return {theme:value?.theme==='dark'?'dark':'light',language:value?.language==='en'?'en':'ko'};}
@@ -29,7 +30,7 @@ export function translateText(value, language){
  for(const suffix of [' 예시 게임 아트워크',' 테스트 살펴보기']){
   if(value.endsWith(suffix))return value.slice(0,-suffix.length)+(suffix.includes('아트워크')?' — illustrative game artwork':' — view playtest');
  }
- if(/^\s*(퍼즐|로그라이크|플랫포머|어드벤처|시뮬레이션|액션) ·/.test(value))return value.replace(/퍼즐|로그라이크|플랫포머|어드벤처|시뮬레이션|액션/g,s=>translations[s]).replace(/약 (\d+)분/g,'about $1 min').replace(/설문 (\d+)문항/g,'$1 survey questions');
+ if(new RegExp('^\\s*('+GENRES.join('|')+') ·').test(value))return value.replace(new RegExp(GENRES.join('|'),'g'),s=>translations[s]||s).replace(/약 (\d+)분/g,'about $1 min').replace(/설문 (\d+)문항/g,'$1 survey questions');
  if(/^\s*(WebGL|Windows|Android) 빌드 받기\s*$/.test(value))return value.replace('빌드 받기','— open build');
  if(/^이용 동의 \d{4}-\d{2}-\d{2}/.test(value))return value.replace('이용 동의','Agreed on').replace('공유와 재배포는 금지됩니다.','Sharing and redistribution are prohibited.');
  for(const [pattern,replace] of variableTranslations)if(pattern.test(value))return value.replace(pattern,replace);
@@ -94,8 +95,8 @@ export function mountPreferences(){
   try{localStorage.setItem(PREFERENCE_KEY,JSON.stringify(prefs));}catch{}
   apply();
  }
- function closeSettings(event){const settings=document.getElementById('settings');if(event.key==='Escape'&&settings.open&&!document.querySelector('dialog[open]')){settings.open=false;settings.querySelector('summary').focus();}}
- function outsideClick(event){const settings=document.getElementById('settings');if(settings.open&&(!event.composedPath().includes(settings)||event.target.closest('a[data-nav]')))settings.open=false;}
+ function closeSettings(event){const login=document.querySelector('#login-area .account-menu');if(event.key==='Escape'&&login?.open&&!document.querySelector('dialog[open]')){login.open=false;login.querySelector('summary').focus();}const settings=document.getElementById('settings');if(event.key==='Escape'&&settings.open&&!document.querySelector('dialog[open]')){settings.open=false;settings.querySelector('summary').focus();}}
+ function outsideClick(event){const login=document.querySelector('#login-area .account-menu');if(login?.open&&!event.composedPath().includes(login))login.open=false;const settings=document.getElementById('settings');if(settings.open&&(!event.composedPath().includes(settings)||event.target.closest('a[data-nav]')))settings.open=false;}
  observer=new MutationObserver(localize);
  apply();
  document.addEventListener('change',onChange);

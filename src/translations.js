@@ -1,4 +1,14 @@
 export default {
+  "전략": "Strategy",
+  "생존": "Survival",
+  "공포": "Horror",
+  "슈팅": "Shooter",
+  "리듬": "Rhythm",
+  "스포츠": "Sports",
+  "레이싱": "Racing",
+  "비주얼 노벨": "Visual novel",
+  "장르 더 보기": "More genres",
+
   "임시 저장": "Drafts",
   "임시 저장 중…": "Saving draft…",
   "저장 대기 중…": "Waiting to save…",

@@ -11,6 +11,7 @@ assert.equal(translateText('인원 제한 없음','en'),'No participant limit');
 assert.equal(translateText('질문 2 유형','en'),'Question 2: type');
 assert.equal(translateText('5점 척도 · 3건','en'),'5-point scale · 3 responses');
 assert.equal(translateText('질문 2번의 보기는 서로 다른 2~6개가 필요합니다.','en'),'Question 2 needs 2–6 distinct options.');
+assert.equal(translateText('비주얼 노벨 · WebGL · 약 15분 · 설문 2문항','en'),'Visual novel · WebGL · about 15 min · 2 survey questions');
 assert.equal(translateText('달빛 정거장','en'),'달빛 정거장');
 assert.equal(translateText('게임 검색','ko'),'게임 검색');
 console.log('PASS preference validation, persistence, UI translation and original game content');
