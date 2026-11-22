@@ -25,4 +25,6 @@ let html=await readFile(path.join(root,'index.html'),'utf8');
 html=html.replace(/<script type="module" src="\/src\/main\.jsx"><\/script>/,`<script type="module" src="/${js.replace(/^dist\//,'')}"></script>`);
 if(css)html=html.replace('</head>',`<link rel="stylesheet" href="/${css.replace(/^dist\//,'')}"></head>`);
 await writeFile(path.join(dist,'index.html'),html);
+await mkdir(path.join(dist,'signup'),{recursive:true});
+await writeFile(path.join(dist,'signup','index.html'),html);
 console.log('Production build written to dist/');

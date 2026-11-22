@@ -1,5 +1,5 @@
 import {createClient} from '@supabase/supabase-js';
-import {accountHtml,authErrorMessage,oauthRequest,SOCIAL_PROVIDERS,socialAvailabilityNote} from './account.js';
+import {accountHtml,authErrorMessage,oauthRequest,SOCIAL_PROVIDERS,socialAvailabilityNote,signupHtml,signupValidation} from './account.js';
 import {createAccountService,accountTaskError} from './account-service.js';
 export function cloudConfiguration(env){const url=env.VITE_SUPABASE_URL||'',key=env.VITE_SUPABASE_PUBLISHABLE_KEY||'';if(!url&&!key)return null;if(!/^https:\/\/[^/]+\.supabase\.co$/.test(url)||!key||key.startsWith('sb_secret_'))throw new Error('Supabase 공개 연결 설정을 확인해 주세요.');return {url,key};}
 export async function createCloud(env){
@@ -36,13 +36,13 @@ export async function createCloud(env){
   async saveMedia(items){const uploaded=[];try{for(const item of items){const path=api.pathFor(item.id,item.scope);checked(await client.storage.from('playtest-media').upload(path,item.file,{contentType:item.type,upsert:false}));uploaded.push(path);}}catch(error){if(uploaded.length)await client.storage.from('playtest-media').remove(uploaded);throw error;}},
   async removeMedia(ids){if(ids.length)checked(await client.storage.from('playtest-media').remove(ids.map(id=>api.pathFor(id))));},
   async getMedia(id){return checked(await client.storage.from('playtest-media').download(id));},
-  mountAccount(onRefresh){
-   const root=document.getElementById('account-area');let disposed=false,manualAuth=false,refreshTimer;
+  mountAccount(onRefresh,{signupPage=false}={}){
+   const root=document.getElementById('account-area');let disposed=false,manualAuth=false,refreshTimer,sentEmail='';
    const service=createAccountService(client,location.origin);
    let mode=viewer.pendingDeletion?'delete':recoverySession?'recovery':currentUrl.searchParams.get('account')==='recovery'?'recover':'',deletion=viewer.deletionPreview||null,taskMessage=currentUrl.searchParams.get('account')==='recovery'&&callbackError?authErrorMessage({code:'otp_expired'}):'';
    function taskStatus(message){taskMessage=message;const el=document.getElementById('account-task-status');if(el)el.textContent=message;}
    function status(message){authStatus=message;const el=document.getElementById('account-status');if(el)el.textContent=message;}
-   function render(){if(disposed)return;const open=root.querySelector('.account-menu')?.open;root.innerHTML=accountHtml(user,viewer,providers,authStatus,{mode,deletion,message:taskMessage});if(open||authStatus)root.querySelector('.account-menu')?.setAttribute('open','');const dialog=document.getElementById('account-dialog');if(dialog){dialog.showModal();dialog.addEventListener('cancel',event=>{event.preventDefault();if(!manualAuth){mode='';taskMessage='';render();}});}}
+   function render(){if(disposed)return;const open=root.querySelector('.account-menu')?.open;root.innerHTML=signupPage?signupHtml(user,providers,authStatus,sentEmail):accountHtml(user,viewer,providers,authStatus,{mode,deletion,message:taskMessage});if(open||authStatus||currentUrl.searchParams.get('account')==='login')root.querySelector('.account-menu')?.setAttribute('open','');const dialog=document.getElementById('account-dialog');if(dialog){dialog.showModal();dialog.addEventListener('cancel',event=>{event.preventDefault();if(!manualAuth){mode='';taskMessage='';render();}});}}
    function busy(value){root.querySelectorAll('[data-account-form] button,[data-account-task] button,[data-account],[data-social]').forEach(button=>{button.disabled=value||Boolean(button.dataset.social&&!providers[button.dataset.social]);});}
    async function loadProviders(){
     try{const response=await fetch('/api/auth/providers',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!response.ok)throw new Error();const data=await response.json();providers={google:data.google===true,naver:data.naver===true,testMode:data.testMode!==false};}catch{providers={google:false,naver:false};}
@@ -63,9 +63,10 @@ export async function createCloud(env){
     }
     const form=event.target.closest('[data-account-form]');if(!form)return;event.preventDefault();if(manualAuth||!form.reportValidity())return;
     manualAuth=true;busy(true);status('');
-    try{const data=new FormData(form);if(event.submitter?.value==='signup'){
-      const result=checked(await client.auth.signUp({email:data.get('email'),password:data.get('password'),options:{data:{nickname:String(data.get('nickname')||'플레이어').slice(0,40)},emailRedirectTo:location.origin}}));
-      if(!result.session){status('인증 메일을 보냈습니다. 이메일에서 가입을 확인한 뒤 로그인해 주세요.');return;}user=result.user;
+    try{const data=new FormData(form);if(form.dataset.accountForm==='signup'){
+      const validation=signupValidation(data);if(validation){status(validation);return;}
+      const result=checked(await client.auth.signUp({email:data.get('email'),password:data.get('password'),options:{data:{nickname:String(data.get('nickname')||'플레이어').trim().slice(0,40)},emailRedirectTo:location.origin}}));
+      if(!result.session){sentEmail=String(data.get('email'));authStatus='';render();return;}user=result.user;
      }else user=checked(await client.auth.signInWithPassword({email:data.get('email'),password:data.get('password')})).user;
      mode='';recoverySession=false;await onRefresh(true);render();
     }catch(error){status(authErrorMessage(error));}finally{manualAuth=false;busy(false);}

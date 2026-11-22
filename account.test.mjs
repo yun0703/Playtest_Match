@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {accountHtml,memberName,oauthRequest,authErrorMessage,MEMBER_GUIDANCE} from './src/account.js';
+import {accountHtml,memberName,oauthRequest,authErrorMessage,MEMBER_GUIDANCE,signupHtml,signupValidation} from './src/account.js';
 import {createHash} from 'node:crypto';
 import {naverHandler} from './server/naver-oauth.js';
 
@@ -16,6 +16,23 @@ assert.equal(oauthRequest('google','https://playtest-match.vercel.app/?next=http
 assert.equal(oauthRequest('naver','https://playtest-match.vercel.app').provider,'custom:naver');
 assert.throws(()=>oauthRequest('unknown','https://playtest-match.vercel.app'));
 assert.ok(!authErrorMessage({message:'secret provider response'}).includes('secret'));
+
+// Signing up is a separate route; pressing Enter in the login form cannot sign up.
+assert.match(ready,/href="\/signup\/"/);
+assert.ok(!ready.includes('name="nickname"'));
+assert.ok(!ready.includes('value="signup"'));
+assert.match(ready,/data-account-form="login"/);
+const signup=signupHtml(null,{google:true,naver:true});
+assert.match(signup,/autocomplete="new-password"/);
+assert.match(signup,/name="confirmation"/);
+assert.match(signup,/data-account-form="signup"/);
+assert.ok(!signup.includes('value="login"'));
+const invalid=new Map([['nickname','테스터'],['password','test-password'],['confirmation','different']]);
+assert.ok(signupValidation(invalid));invalid.set('confirmation','test-password');assert.equal(signupValidation(invalid),'');
+invalid.set('nickname','   ');assert.ok(signupValidation(invalid));
+assert.ok(!signupHtml(null,{},'', '<img onerror=evil>').includes('<img'));
+assert.ok(!signupHtml(null,{},'', 'test@example.com').includes('data-account-form'));
+assert.ok(!signupHtml(user).includes('data-account-form'));
 
 const env={NAVER_CLIENT_ID:'test-client',NAVER_CLIENT_SECRET:'unit-test-only-secret',VITE_SUPABASE_URL:'https://test.supabase.co'};
 const verifier='v'.repeat(64),challenge=createHash('sha256').update(verifier).digest('base64url');
