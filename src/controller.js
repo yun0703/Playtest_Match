@@ -1,3 +1,5 @@
+import {developerDrafts,draftRecord,draftKey} from './developer-drafts.js';
+import {surveyCsv,bugsCsv,downloadCsv} from './result-export.js';
 import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES,unlimitedCapacity,capacityFull,remainingCapacity,capacityValidation,maximumDeadline,deadlineValidation,recruitmentOpen} from './playtest-features.js';
 import {validateMedia,stageMedia,saveMedia,removeMedia,mediaMetadata,releaseStaged,createMediaHydrator} from './media-store.js';
 import {fileView,mediaEditor,galleryHtml,deadlineHtml,progressHtml,bugFormHtml,bugListHtml,notificationsHtml,focusHtml,problemChoiceHtml} from './feature-views.js';
@@ -114,7 +116,7 @@ function save(){if(cloud)throw new Error('서버 모드에서 로컬 변경은 �
 
 let S=migrateFeatures(cloud?initialState:load());
 let mediaHydrator=createMediaHydrator();
-const ui={cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'open',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
+const ui={devFields:null,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'open',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=u=>/^https?:\/\//i.test(u||'')?u:'';
@@ -123,6 +125,18 @@ const today=()=>seoulDate();
 const allNotifications=()=>[...deadlineNotifications(S),...S.notifications].slice(0,100);
 function renderNotifications(){const el=$('#notification-area');if(el){const open=el.querySelector('details')?.open;el.innerHTML=notificationsHtml(allNotifications(),S);if(open)el.querySelector('details').open=true;}}
 function clearUploads(){releaseStaged((ui.mediaDraft||[]).filter(x=>x.file));releaseStaged(ui.bugMedia);ui.mediaDraft=null;ui.bugMedia=[];}
+let draftTimer,draftPending=Promise.resolve(),draftOwner=cloud?.user?.id||(!cloud?'local':'');
+const DEV_FIELDS=['f-title','f-team','f-genre','f-platform','f-build','f-min','f-slots','f-deadline','f-vis','f-code','f-focus','f-teaser','f-link','f-how'];
+function currentDraftOwner(){return cloud?.user?.id||(!cloud?'local':'');}
+function captureDevFields(){const form=$('[data-form="dev"]');if(!form)return false;ui.devFields=Object.fromEntries(DEV_FIELDS.map(id=>[id,$('#'+id).value]));ui.devFields['f-unlimited']=$('#f-unlimited').checked;return true;}
+function restoreDevFields(){if(!ui.devFields||!$('[data-form="dev"]'))return;for(const id of DEV_FIELDS)if($('#'+id))$('#'+id).value=ui.devFields[id]??'';$('#f-unlimited').checked=!!ui.devFields['f-unlimited'];$('#f-slots').disabled=$('#f-unlimited').checked;$('#code-field').hidden=$('#f-vis').value!=='invite';$('#vis-desc').textContent=VIS_DESC[$('#f-vis').value]||'';}
+function draftStatus(message){ui.draftStatus=message;const node=$('#draft-status');if(node)node.textContent=message;}
+async function loadDeveloperDrafts(){const owner=currentDraftOwner();if(!owner)return;try{const records=await developerDrafts.list(owner);if(owner!==currentDraftOwner())return;ui.savedDrafts=records.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));}catch{ui.savedDrafts=[];}finally{ui.draftReady=true;}}
+async function persistDeveloperDraft(){clearTimeout(draftTimer);if(!captureDevFields()||!currentDraftOwner())return true;syncDraft();const owner=currentDraftOwner(),record=draftRecord(owner,ui.edit,ui.devFields,ui.draft||[],ui.mediaDraft||[]);draftStatus('임시 저장 중…');draftPending=draftPending.catch(()=>{}).then(()=>developerDrafts.save(record));try{await draftPending;if(owner!==currentDraftOwner())return;ui.savedDrafts=[record,...ui.savedDrafts.filter(d=>d.key!==record.key)];draftStatus('임시 저장 완료');return true;}catch{draftStatus('임시 저장에 실패했습니다. 저장 공간과 브라우저 설정을 확인해 주세요.');return false;}}
+function queueDeveloperDraft(){if(!$('[data-form="dev"]'))return;draftStatus('저장 대기 중…');clearTimeout(draftTimer);draftTimer=setTimeout(()=>void persistDeveloperDraft(),400);}
+async function startDeveloperEditor(edit=null){if(await persistDeveloperDraft()===false)return;await loadDeveloperDrafts();clearUploads();ui.edit=edit;ui.devFields=null;ui.draft=null;ui.draftStatus='';const record=ui.savedDrafts.find(d=>d.key===draftKey(currentDraftOwner(),edit));if(record){ui.devFields={...record.fields};ui.draft=clone(record.survey);ui.mediaDraft=record.media.map(item=>({...item,...(item.file?{url:URL.createObjectURL(item.file)}:{})}));ui.draftStatus='임시 저장한 내용을 불러왔습니다.';}ui.dTab='new';render(false);top();}
+async function clearPublishedDraft(edit){clearTimeout(draftTimer);const owner=currentDraftOwner();try{await draftPending.catch(()=>{});await developerDrafts.remove(owner,edit);ui.savedDrafts=ui.savedDrafts.filter(d=>d.key!==draftKey(owner,edit));}catch{toast('등록은 완료했지만 임시 저장 정리에 실패했습니다. 임시 저장 목록을 확인해 주세요.');}ui.devFields=null;ui.draftStatus='';}
+function draftsHtml(){return `<section class="panel"><h2>임시 저장</h2><p class="hint">같은 계정과 이 브라우저에서 이어서 작성할 수 있습니다. 브라우저 데이터를 지우면 삭제됩니다. 공개 등록 전에는 다른 사람에게 보이지 않습니다.</p>${!ui.draftReady?'<p>불러오는 중…</p>':!ui.savedDrafts.length?'<p class="empty">임시 저장한 게임이 없습니다.</p>':ui.savedDrafts.map(d=>`<article class="draft-row"><div><h3 data-no-translate>${esc(d.fields['f-title']||'제목 없는 게임')}</h3><p class="hint"><span>${d.edit?'수정 중':'새 게임'}</span> · <time>${esc(new Date(d.updatedAt).toLocaleString('ko-KR'))}</time></p></div><div class="actions"><button class="btn ghost sm" type="button" data-act="resume-draft" data-id="${esc(d.key)}">이어서 작성</button><button class="text-link" type="button" data-act="delete-draft" data-id="${esc(d.key)}">삭제</button>${ui.draftDelete===d.key?`<p>이 브라우저의 임시 저장과 첨부파일을 삭제합니다. 공개된 게임은 유지됩니다.</p><button class="btn danger sm" type="button" data-act="confirm-delete-draft" data-id="${esc(d.key)}">임시 저장 삭제 확정</button><button class="btn ghost sm" type="button" data-act="keep-draft">유지</button>`:''}</div></article>`).join('')}</section>`;}
 function updateMediaEditor(){const el=$('#media-preview');if(el){el.innerHTML=mediaEditor(ui.mediaDraft||[]);mediaHydrator.hydrate(el);}}
 function updateBugPreview(){const el=$('#bug-preview');if(el)el.innerHTML=ui.bugMedia.map(x=>fileView(x,{preview:true})+`<button class="text-link" type="button" data-act="bug-file-remove">삭제</button>`).join('');}
 function refreshDeadlines(){renderNotifications();const main=$('#main');if(main?.querySelectorAll)main.querySelectorAll('[data-deadline-test]').forEach(el=>{const test=byId(el.dataset.deadlineTest);if(test)el.outerHTML=deadlineHtml(test);});if((ui.page==='home'||ui.page==='tester'&&ui.tTab==='open')&&main?.querySelector?.('.deadline-line.overdue'))render(false);}
@@ -179,6 +193,7 @@ function slotsHtml(t){
   const full=capacityFull(t),pct=Math.min(100,Math.round(t.applicants/t.slots*100));
   return `<div class="slots"><div class="bar ${full?'full':''}"><span style="width:${pct}%"></span></div><span class="mono">${t.applicants}/${t.slots}명</span></div>`;
 }
+function cancellationHtml(t,application){if(!application||!['waiting','applied'].includes(application.status))return '';const quitting=application.status==='applied',label=quitting?'참여 포기':'신청 취소';return `<section class="cancellation-panel">${ui.cancelApplication===t.id?`<p>${quitting?'참여를 포기하면 정원이 다시 열리고 빌드와 설문 접근이 종료됩니다.':'승인 대기 중인 신청을 취소합니다.'} 모집 중이면 다시 신청할 수 있으며, 기존 버그 제보는 유지됩니다.</p><div class="actions"><button type="button" class="btn danger" data-act="confirm-cancellation" data-id="${t.id}">${label} 확정</button><button type="button" class="btn ghost" data-act="keep-application">참여 유지</button></div>`:`<button type="button" class="text-link" data-act="cancel-application" data-id="${t.id}">${label}</button>`}</section>`;}
 function renderTester(){
   if(ui.detail){const d=byId(ui.detail);if(d&&visibleTo(d))return renderDetail(d)}
   const open=S.tests.filter(t=>recruitmentOpen(t));
@@ -189,7 +204,7 @@ function renderTester(){
     <button role="tab" type="button" data-act="tab-t" data-tab="open" aria-selected="${ui.tTab==='open'}">모집 중 ${open.length}</button>
     <button role="tab" type="button" data-act="tab-t" data-tab="mine" aria-selected="${ui.tTab==='mine'}">내 참여 ${mineList.length}</button></div>`;
   const chips=ui.tTab==='open'?`<div class="sub" aria-label="장르 필터">${genres.map(g=>`<button type="button" class="chip" data-act="genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}</button>`).join('')}</div>`:'';
-  const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
+  const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
   const empty=ui.tTab==='mine'?'아직 신청한 테스트가 없습니다. 모집 중 탭에서 플레이해 보고 싶은 게임을 골라 보세요.':'조건에 맞는 테스트가 없습니다.';
   return `<div class="browse-heading"><h1>게임 둘러보기</h1><p class="muted">새로운 세계를 만나고, 당신의 의견을 남겨보세요.</p></div>${tabs}${chips}${catalogTools()}${list.length?`<div class="grid">${cards}</div>`:`<div class="empty">${empty}</div>`}`;
 }
@@ -245,7 +260,7 @@ function renderDetail(t){
   }else{
     side=`<div class="panel"><h3>설문을 제출했습니다</h3><p class="muted">참여해 주셔서 감사합니다. 개발자가 결과를 확인합니다.</p></div>`;
   }
-  const cancellation=['waiting','applied'].includes(st)?`<section class="cancellation-panel">${ui.cancelApplication===t.id?`<p>신청을 취소하면 빌드와 설문 접근이 종료됩니다. 모집 중이면 다시 신청할 수 있습니다.</p><div class="actions"><button type="button" class="btn danger" data-act="confirm-cancellation" data-id="${t.id}">신청 취소 확정</button><button type="button" class="btn ghost" data-act="keep-application">참여 유지</button></div>`:`<button type="button" class="text-link" data-act="cancel-application" data-id="${t.id}">신청 취소</button>`}</section>`:'';
+  const cancellation=cancellationHtml(t,S.mine[t.id]);
   return `<button class="back" type="button" data-act="back">← 목록으로</button><div class="cols"><div class="stack">${info}</div><div class="col-side">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
 }
 
@@ -291,8 +306,9 @@ function surveyBuilderHtml(){
   </div>`).join('')}</div>
   <div class="actions" style="align-items:center"><button class="btn ghost sm" type="button" data-act="q-add" ${d.length>=MAXQ?'disabled':''}>질문 추가</button><span class="hint">${d.length}/${MAXQ}문항</span></div>`;
 }
-function renderSurvey(){const c=$('#survey-builder');if(c&&ui.draft)c.innerHTML=surveyBuilderHtml()}
+function renderSurvey(){const c=$('#survey-builder');if(c&&ui.draft)c.innerHTML=surveyBuilderHtml();queueDeveloperDraft();}
 function syncDraft(){
+  captureDevFields();
   const c=$('#survey-builder');if(!c||!ui.draft)return;
   c.querySelectorAll('.qrow').forEach((r,i)=>{
     const q=ui.draft[i];if(!q)return;
@@ -317,7 +333,7 @@ function devForm(){
   return `<div class="panel" id="dev-form"><h2>${e?'테스트 수정':'새 테스트 등록'}</h2>
     ${hid?`<p class="reason">숨김 사유: ${esc(e.reason||'')}</p>`:''}
     <p class="notice">${hid?'수정을 저장하면 운영자에게 재공개 요청이 전달됩니다.':e?'수정 내용은 바로 반영됩니다.':'등록하면 바로 공개됩니다. 사전 심사는 없고, 신고가 접수되면 운영자가 확인합니다.'}</p>
-    <form data-form="dev" novalidate>
+    <div class="draft-toolbar"><p class="hint">작성 내용과 첨부파일은 이 브라우저에 자동 임시 저장됩니다.</p><button class="btn ghost sm" type="button" data-act="save-draft">임시 저장</button><p id="draft-status" role="status" aria-live="polite">${esc(ui.draftStatus)}</p></div><form data-form="dev" novalidate>
       <fieldset class="group"><legend>기본 정보</legend><div class="fields">
         <div class="field"><label for="f-title">게임 이름</label><input type="text" id="f-title" value="${v('title')}" maxlength="40"></div>
         <div class="field"><label for="f-team">팀 이름</label><input type="text" id="f-team" value="${v('team')}" maxlength="40"></div>
@@ -355,7 +371,7 @@ function myTestCard(t){
   let body='';
   if(t.status==='hidden')body=`<p class="reason">운영자가 숨김 처리했습니다. ${esc(t.reason||'')}</p><div class="actions"><button class="btn sm" type="button" data-act="edit" data-id="${t.id}">수정하고 재공개 요청</button></div>`;
   else if(t.status==='appeal')body=`<p class="reason warn">재공개 요청을 운영자가 검토하고 있습니다.</p>`;
-  else body=`${slotsHtml(t)}<div class="actions"><button class="btn ghost sm" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost sm" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${summaryHtml(t)}</details>`;
+  else body=`${slotsHtml(t)}<div class="actions"><button class="btn ghost sm" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost sm" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary><div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
   const rc=S.reports.filter(r=>r.testId===t.id&&r.status==='open').length;
   return `<article class="card"><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
     <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${esc(t.genre)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="foot">${deadlineHtml(t)}${body}</div></div></article>`;
@@ -367,9 +383,11 @@ function renderDeveloper(){
     <button role="tab" type="button" data-act="tab-d" data-tab="mine" aria-selected="${ui.dTab==='mine'}">내 테스트 ${mine.length}</button>
     <button role="tab" type="button" data-act="tab-d" data-tab="new" aria-selected="${ui.dTab==='new'}">${ui.edit?'테스트 수정':'새 테스트 등록'}</button></div>`;
   const bugCount=S.bugs.filter(b=>mine.some(t=>t.id===b.testId)).length;
+  const draftTab=`<button role="tab" type="button" data-act="tab-d" data-tab="drafts" aria-selected="${ui.dTab==='drafts'}">임시 저장 <span>${ui.savedDrafts.length}</span></button>`;
   const bugTab=`<button role="tab" type="button" data-act="tab-d" data-tab="bugs" aria-selected="${ui.dTab==='bugs'}">버그 제보 <span>${bugCount}</span></button>`;
-  const head=`<div class="head"><h2>개발자</h2></div>${tabs.replace('</div>',bugTab+'</div>')}`;
-  if(ui.dTab==='bugs')return head+(bugCount?mine.filter(t=>S.bugs.some(b=>b.testId===t.id)).map(t=>`<section class="panel"><h2 data-no-translate>${esc(t.title)}</h2>${bugListHtml(t,S.bugs,{developer:true})}</section>`).join(''):'<p class="empty">아직 버그 제보가 없습니다.</p>');
+  const head=`<div class="head"><h2>개발자</h2></div>${tabs.replace('</div>',draftTab+bugTab+'</div>')}`;
+  if(ui.dTab==='drafts')return head+draftsHtml();
+  if(ui.dTab==='bugs')return head+(bugCount?mine.filter(t=>S.bugs.some(b=>b.testId===t.id)).map(t=>`<section class="panel"><h2 data-no-translate>${esc(t.title)}</h2><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button>${bugListHtml(t,S.bugs,{developer:true})}</section>`).join(''):'<p class="empty">아직 버그 제보가 없습니다.</p>');
   if(ui.dTab==='new')return head+devForm();
   return head+(mine.length?`<div class="grid">${mine.map(myTestCard).join('')}</div>`:'<div class="empty">등록한 테스트가 없습니다. 새 테스트 등록 탭에서 첫 게임을 올려 보세요.</div>');
 }
@@ -423,26 +441,27 @@ function restoreFeedbackDraft(){
 }
 function openBugFromSurvey(){const panel=$('.bug-report-panel');if(panel){panel.open=true;panel.scrollIntoView({block:'start',behavior:'smooth'});$('#bug-title')?.focus({preventScroll:true});}}
 function render(capture=true){
- if(capture)captureFeedbackDraft();
-  syncDraft();
+ if(capture){captureFeedbackDraft();syncDraft();}
   renderMenu();
   const p=ui.page;
   $('#main').dataset.page=p;
   $('#main').innerHTML=p==='home'?renderHome():p==='tester'?renderTester():p==='developer'?renderDeveloper():(!cloud||cloud.canAdmin)?renderAdmin():'<p class="notice">운영자 권한이 필요합니다.</p>';
+  restoreDevFields();
   restoreFeedbackDraft();
   mediaHydrator.hydrate($('#main'));
 }
-function nav(page,sub){
+function nav(page,sub,saved=false){
+  if(!saved&&$('[data-form="dev"]')){void persistDeveloperDraft().then(ok=>{if(ok!==false)nav(page,sub,true);});return;}
   syncDraft();
   clearUploads();
   ui.gallery=null;
   ui.page=PAGES.includes(page)?page:'home';
-  ui.detail=null;ui.reporting=null;ui.hiding=null;ui.edit=null;ui.draft=null;
+  ui.detail=null;ui.reporting=null;ui.hiding=null;ui.edit=null;ui.draft=null;ui.devFields=null;ui.draftStatus='';
   if(ui.page==='tester')ui.tTab=sub||'open';
-  if(ui.page==='developer')ui.dTab=sub||'mine';
+  if(ui.page==='developer')ui.dTab=sub==='new'?'mine':sub||'mine';
   if(ui.page==='admin')ui.aTab=sub||'reports';
   try{if(location.hash!=='#'+ui.page)location.hash=ui.page}catch(e){}
-  render();window.scrollTo(0,0);
+  render(false);window.scrollTo(0,0);if(ui.page==='developer'&&sub==='new')void startDeveloperEditor();
 }
 function hashPage(){const h=(location.hash||'').slice(1);return PAGES.includes(h)?h:null}
 function top(){const m=$('#main');if(m&&m.scrollIntoView)m.scrollIntoView({block:'start'})}
@@ -476,16 +495,22 @@ listen(document,'click',async e=>{
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
   const a=b.dataset.act,id=b.dataset.id;
   if(cloud&&await handleCloudClick(a,b,e))return;
+  if(a==='delete-draft'){ui.draftDelete=id;render(false);return;}
+  if(a==='keep-draft'){ui.draftDelete=null;render(false);return;}
+  if(a==='confirm-delete-draft'){const record=ui.savedDrafts.find(d=>d.key===id);if(!record)return;try{await developerDrafts.remove(currentDraftOwner(),record.edit);ui.savedDrafts=ui.savedDrafts.filter(d=>d.key!==id);ui.draftDelete=null;render(false);}catch{toast('임시 저장을 삭제하지 못했습니다.');}return;}
+  if(a==='save-draft'){await persistDeveloperDraft();return;}
+  if(a==='resume-draft'){const record=ui.savedDrafts.find(d=>d.key===id);if(!record)return;if(record.edit&&byId(record.edit)?.owner!=='me')return toast('원본 테스트에 접근할 수 없습니다.');return startDeveloperEditor(record.edit);}
+  if(a==='export-survey'||a==='export-bugs'){const t=byId(id);try{downloadCsv(a==='export-survey'?surveyCsv(t):bugsCsv(t,S.bugs),t.title,a==='export-survey'?'survey':'bugs');toast('CSV 파일을 다운로드했습니다.');}catch(error){toast(error.message);}return;}
   if(a==='cancel-application'){ui.cancelApplication=id;render(false);return;}
   if(a==='keep-application'){ui.cancelApplication=null;render(false);return;}
   if(a==='confirm-cancellation'){
-    if(cloud){if(await remoteCommand('cancel_application',{testId:id})){ui.cancelApplication=null;delete ui.feedbackDrafts[id];render(false);toast('신청을 취소했습니다.');}return;}
+    if(cloud){if(await remoteCommand('cancel_application',{testId:id})){ui.cancelApplication=null;delete ui.feedbackDrafts[id];render(false);toast('참여를 취소했습니다. 모집 인원이 갱신되었습니다.');}return;}
     const t=byId(id),m=S.mine[id];if(!m||!['waiting','applied'].includes(m.status))return;
     const previous=clone(S);if(m.status==='applied')t.applicants=Math.max(0,t.applicants-1);t.requests=t.requests.filter(r=>r.id!=='me');delete S.mine[id];
-    if(!save()){S=previous;return;}ui.cancelApplication=null;delete ui.feedbackDrafts[id];render(false);toast('신청을 취소했습니다.');return;
+    if(!save()){S=previous;return;}ui.cancelApplication=null;delete ui.feedbackDrafts[id];render(false);toast('참여를 취소했습니다. 모집 인원이 갱신되었습니다.');return;
   }
   if(a==='open-bug-from-survey'){captureFeedbackDraft();openBugFromSurvey();return;}
-  if(a==='media-remove'){const removed=ui.mediaDraft.find(m=>m.id===id);if(removed?.file)releaseStaged([removed]);ui.mediaDraft=ui.mediaDraft.filter(m=>m.id!==id);if(!ui.mediaDraft.some(m=>m.cover)){const first=ui.mediaDraft.find(m=>m.kind==='image');if(first)first.cover=true;}updateMediaEditor();return;}
+  if(a==='media-remove'){const removed=ui.mediaDraft.find(m=>m.id===id);if(removed?.file)releaseStaged([removed]);ui.mediaDraft=ui.mediaDraft.filter(m=>m.id!==id);if(!ui.mediaDraft.some(m=>m.cover)){const first=ui.mediaDraft.find(m=>m.kind==='image');if(first)first.cover=true;}updateMediaEditor();queueDeveloperDraft();return;}
   if(a==='bug-file-remove'){releaseStaged(ui.bugMedia);ui.bugMedia=[];updateBugPreview();return;}
   if(a==='media-select'){ui.gallery=id;const t=byId(ui.detail);const el=$('#detail-gallery');if(t&&el){el.outerHTML=galleryHtml(t,id);mediaHydrator.hydrate($('#main'));}return;}
   if(a==='start-play'){const m=S.mine[id];if(m?.status==='applied'){m.startedAt=new Date().toISOString();save();const el=$(`[data-progress-id="${id}"]`);if(el)el.outerHTML=progressHtml(byId(id),m);}return;}
@@ -495,7 +520,7 @@ listen(document,'click',async e=>{
   if(a==='feature'){ui.featured=id;render();return;}
   if(a==='clear-filters'){ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
   if(a==='tab-t'){releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.tTab=b.dataset.tab;ui.detail=null;return render()}
-  if(a==='tab-d'){syncDraft();clearUploads();ui.dTab=b.dataset.tab;if(ui.dTab==='mine'){ui.edit=null;ui.draft=null}return render()}
+  if(a==='tab-d'){if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
   if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;return render()}
   if(a==='genre'){ui.genre=b.dataset.genre;return render()}
   if(a==='open'){releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.gallery=null;ui.page='tester';ui.detail=id;ui.reporting=null;render();return top()}
@@ -539,12 +564,14 @@ listen(document,'click',async e=>{
     if(j>=0&&j<ui.draft.length){const x=ui.draft[i];ui.draft[i]=ui.draft[j];ui.draft[j]=x}
     return renderSurvey();
   }
-  if(a==='edit'){clearUploads();ui.edit=id;ui.draft=null;ui.dTab='new';render();return top()}
-  if(a==='cancel-edit'){clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';return render()}
+  if(a==='edit')return startDeveloperEditor(id);
+  if(a==='cancel-edit'){if(await persistDeveloperDraft()===false)return;clearUploads();ui.edit=null;ui.draft=null;ui.devFields=null;ui.dTab='mine';return render(false)}
   if(a==='reset'){const previous=S,ids=[...new Set([...S.tests.flatMap(t=>t.media.map(m=>m.id)),...S.bugs.flatMap(b=>(b.attachments||[]).map(m=>m.id))])];clearUploads();S=migrateFeatures(seed());if(!save()){S=previous;return;}removeMedia(ids).catch(()=>{});ui.detail=null;ui.reporting=null;ui.hiding=null;ui.edit=null;ui.draft=null;ui.tTab='open';ui.dTab='mine';ui.aTab='reports';ui.genre='전체';render();return toast('예시 데이터로 되돌렸습니다.')}
 });
 
+listen(document,'input',e=>{if(e.target.closest('[data-form="dev"]')&&e.target.type!=='file')queueDeveloperDraft();});
 listen(document,'change',e=>{
+  if(e.target.closest('[data-form="dev"]')&&e.target.type!=='file')queueDeveloperDraft();
   if(e.target.name==='problem-choice'){updateProblemGuidance();captureFeedbackDraft();if(e.target.value==='new')openBugFromSurvey();return;}
   if(e.target.name==='linked-bugs'){captureFeedbackDraft();return;}
   if(e.target.id==='f-media'||e.target.id==='bug-file'){
@@ -552,9 +579,9 @@ listen(document,'change',e=>{
     const error=validateMedia(existing,files,isBug?{imagesOnly:true,maxImages:1,maxVideos:0}:{});
     const err=$(isBug?'#bug-error':'#media-error');if(err)err.textContent=error;
     if(!error){const items=stageMedia(files);if(isBug)items.forEach(item=>item.scope='bug');if(isBug){ui.bugMedia.push(...items);updateBugPreview();}else{ui.mediaDraft.push(...items);if(!ui.mediaDraft.some(m=>m.cover)){const first=ui.mediaDraft.find(m=>m.kind==='image');if(first)first.cover=true;}updateMediaEditor();}}
-    e.target.value='';return;
+    e.target.value='';if(!isBug)queueDeveloperDraft();return;
   }
-  if(e.target.name==='cover-id'){ui.mediaDraft.forEach(m=>m.cover=m.id===e.target.value);return;}
+  if(e.target.name==='cover-id'){ui.mediaDraft.forEach(m=>m.cover=m.id===e.target.value);queueDeveloperDraft();return;}
 
   if(e.target.id==='platform-filter'){ui.platform=e.target.value;render();return;}
   if(e.target.id==='sort-filter'){ui.sort=e.target.value;render();return;}
@@ -648,6 +675,7 @@ listen(document,'submit',async e=>{
     S.mine[t.id]=Object.assign({},S.mine[t.id],{status:'done'});if(!save()){S=previous;return;}delete ui.feedbackDrafts[t.id];render(false);return toast('설문을 제출했습니다.');
   }
   if(f.dataset.form==='dev'){
+    await persistDeveloperDraft();
     syncDraft();
     const g=id=>$('#'+id).value.trim(),err=$('#dev-err');
     const d={title:g('f-title'),team:g('f-team'),genre:g('f-genre'),platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:$('#f-unlimited').checked?null:+g('f-slots'),
@@ -682,7 +710,7 @@ listen(document,'submit',async e=>{
     d.media=ui.mediaDraft.map(mediaMetadata);
     ui.saving=true;const submit=f.querySelector('[type="submit"]');if(submit)submit.disabled=true;
     try{await saveMedia(pending);}catch(error){ui.saving=false;if(submit)submit.disabled=false;err.textContent='파일을 저장하지 못했습니다. 저장 공간과 브라우저 설정을 확인해 주세요.';return;}
-    if(cloud){ui.saving=false;if(await remoteCommand('save_test',{testId:ui.edit,data:d})){clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';render();top();toast('테스트를 저장했습니다.');await removeMedia(oldIds.filter(id=>!d.media.some(m=>m.id===id))).catch(()=>{});}else{if(submit)submit.disabled=false;await removeMedia(pending.map(m=>mediaMetadata(m).id)).catch(()=>{});}return;}
+    if(cloud){ui.saving=false;if(await remoteCommand('save_test',{testId:ui.edit,data:d})){await clearPublishedDraft(ui.edit);clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';render(false);top();toast('테스트를 저장했습니다.');await removeMedia(oldIds.filter(id=>!d.media.some(m=>m.id===id))).catch(()=>{});}else{if(submit)submit.disabled=false;await removeMedia(pending.map(m=>mediaMetadata(m).id)).catch(()=>{});}return;}
     if(ui.edit){
       const t=byId(ui.edit),was=t.status;Object.assign(t,d);
       if(was==='hidden'){t.status='appeal';msg='수정했습니다. 운영자가 재공개 여부를 검토합니다.'}else msg='수정 내용을 저장했습니다.';
@@ -691,7 +719,7 @@ listen(document,'submit',async e=>{
       msg='등록했습니다. 테스트가 바로 공개되었습니다.';
     }
     if(!save()){S=oldState;ui.saving=false;if(submit)submit.disabled=false;await removeMedia(pending.map(m=>m.id)).catch(()=>{});return;}
-    ui.saving=false;clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';render();top();toast(msg);
+    await clearPublishedDraft(ui.edit);ui.saving=false;clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';render(false);top();toast(msg);
     await removeMedia(oldIds.filter(id=>!d.media.some(m=>m.id===id))).catch(()=>{});
   }
 });
@@ -701,12 +729,15 @@ let disposeAccount;
 if(cloud){
  const footer=document.querySelector('footer p');if(footer)footer.textContent='PlayTest Match · 개발자와 플레이어가 함께 만드는 게임.';
  document.querySelector('footer [data-act="reset"]')?.remove();
- disposeAccount=cloud.mountAccount(async reset=>{if(reset){clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';location.hash='#home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());render();});
+ disposeAccount=cloud.mountAccount(async reset=>{if(reset){if(draftOwner===currentDraftOwner())await persistDeveloperDraft();draftOwner=currentDraftOwner();clearTimeout(draftTimer);ui.devFields=null;ui.savedDrafts=[];ui.draftReady=false;clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';location.hash='#home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());await loadDeveloperDrafts();render();});
 }
 const h0=hashPage();if(h0)ui.page=h0;
 render();
+if(globalThis.indexedDB)void loadDeveloperDrafts().then(()=>{if(!controller.signal.aborted&&ui.page==='developer'&&ui.dTab!=='new')render();});
+listen(window,'pagehide',()=>{void persistDeveloperDraft();});
+listen(document,'visibilitychange',()=>{if(document.visibilityState==='hidden')void persistDeveloperDraft();});
 const deadlineTimer=typeof window.setInterval==='function'?window.setInterval(refreshDeadlines,60000):null;
 listen(window,'focus',refreshDeadlines);
 listen(document,'keydown',e=>{if(e.key==='Escape'){const el=$('#notification-area details');if(el?.open){el.open=false;el.querySelector('summary').focus();}}});
-return ()=>{disposeAccount?.();controller.abort();if(deadlineTimer)clearInterval(deadlineTimer);clearUploads();mediaHydrator.dispose();};
+return ()=>{void persistDeveloperDraft();clearTimeout(draftTimer);disposeAccount?.();controller.abort();if(deadlineTimer)clearInterval(deadlineTimer);clearUploads();mediaHydrator.dispose();};
 }

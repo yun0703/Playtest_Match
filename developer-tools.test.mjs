@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {draftKey,draftRecord} from './src/developer-drafts.js';
+import {csvCell,csvDocument,surveyCsv,bugsCsv} from './src/result-export.js';
+const file=new Blob(['image'],{type:'image/png'}),fields={'f-title':'미공개 게임','f-how':'작성 중인 긴 설명'},survey=[{id:'q1',label:'얼마나 재미있나요?',type:'scale',required:true}];
+const record=draftRecord('user-a',null,fields,survey,[{id:'file',file,url:'blob:temporary',name:'image.png'}]);
+assert.notEqual(record.key,draftKey('user-b',null));assert.notEqual(record.key,draftKey('user-a','edit-game'));assert.equal(record.media[0].url,undefined);assert.equal(await record.media[0].file.text(),'image');fields['f-how']='changed';survey[0].label='changed';assert.equal(record.fields['f-how'],'작성 중인 긴 설명');assert.equal(record.survey[0].label,'얼마나 재미있나요?');
+assert.equal(csvCell('a,"b"\nc'),'"a,""b""\nc"');for(const dangerous of ['=SUM(1,2)','+cmd','-1+1','@cmd','  =cmd','\tcmd'])assert.ok(csvCell(dangerous).startsWith('"\''));
+assert.ok(csvDocument([['한글']]).startsWith('\uFEFF'));assert.ok(csvDocument([['a'],['b']]).includes('\r\n'));
+const test={id:'one',title:'테스트',owner:'me',survey:[{id:'q1',label:'현재 문항',type:'scale'}],feedbacks:[{answers:{q1:4,removed:'이전 문항 답변'},issueStatus:'reported',bugIds:['bug1']}]};
+const csv=surveyCsv(test);assert.ok(csv.includes('"4"'));assert.ok(csv.includes('이전 문항 답변'));assert.ok(csv.includes('삭제된 문항'));assert.ok(csv.includes('bug1'));
+const bugCsv=bugsCsv(test,[{id:'bug1',testId:'one',title:'=HYPERLINK("evil")',status:'fixed',severity:'critical',description:'한글, 쉼표\n줄바꿈',attachments:[{name:'검증.png'}]},{id:'other',testId:'two',title:'must not leak'}]);assert.ok(bugCsv.includes('검증.png'));assert.ok(!bugCsv.includes('must not leak'));assert.ok(bugCsv.includes('수정 완료'));assert.throws(()=>surveyCsv({...test,owner:'other'}));assert.throws(()=>bugsCsv({...test,owner:'other'},[]));
+console.log('PASS account-scoped draft snapshots and file preservation; CSV quoting, formula protection, old answers, and owner/game isolation');
