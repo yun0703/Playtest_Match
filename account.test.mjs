@@ -5,7 +5,7 @@ import {naverHandler} from './server/naver-oauth.js';
 
 const user={id:'member-1',user_metadata:{name:'Google player'}};
 assert.equal(memberName(user),'Google player');
-const member=accountHtml(user);assert.ok(member.includes('href="#tester"'));assert.ok(member.includes('href="#developer"'));assert.ok(member.includes(MEMBER_GUIDANCE));
+const member=accountHtml(user);assert.ok(member.includes('href="#tester"'));assert.ok(member.includes('href="#developer"'));assert.ok(member.includes('테스터 · 개발자'));
 assert.ok(!member.includes('#admin'));
 assert.ok(accountHtml({...user,user_metadata:{name:'<img onerror=evil>'}}).includes('&lt;img'));
 const ready=accountHtml(null,{}, {google:true,naver:false});

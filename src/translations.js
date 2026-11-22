@@ -1,4 +1,7 @@
 export default {
+  "메뉴": "Menu",
+  "화면 · 언어 설정": "Display & language",
+  "테스터 · 개발자": "Tester · Developer",
   "홈으로": "Home",
   "이미 로그인되어 있습니다": "You are already signed in",
   "이메일을 확인해 주세요": "Check your email",

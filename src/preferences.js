@@ -94,8 +94,8 @@ export function mountPreferences(){
   try{localStorage.setItem(PREFERENCE_KEY,JSON.stringify(prefs));}catch{}
   apply();
  }
- function closeSettings(event){const settings=document.getElementById('settings');if(event.key==='Escape'&&settings.open){settings.open=false;settings.querySelector('summary').focus();}}
- function outsideClick(event){const settings=document.getElementById('settings');if(settings.open&&!settings.contains(event.target))settings.open=false;}
+ function closeSettings(event){const settings=document.getElementById('settings');if(event.key==='Escape'&&settings.open&&!document.querySelector('dialog[open]')){settings.open=false;settings.querySelector('summary').focus();}}
+ function outsideClick(event){const settings=document.getElementById('settings');if(settings.open&&(!event.composedPath().includes(settings)||event.target.closest('a[data-nav]')))settings.open=false;}
  observer=new MutationObserver(localize);
  apply();
  document.addEventListener('change',onChange);

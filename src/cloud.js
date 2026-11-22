@@ -1,5 +1,6 @@
 import {createClient} from '@supabase/supabase-js';
 import {accountHtml,authErrorMessage,oauthRequest,SOCIAL_PROVIDERS,socialAvailabilityNote,signupHtml,signupValidation} from './account.js';
+import {accountDialogHtml} from './account-controls.js';
 import {createAccountService,accountTaskError} from './account-service.js';
 export function cloudConfiguration(env){const url=env.VITE_SUPABASE_URL||'',key=env.VITE_SUPABASE_PUBLISHABLE_KEY||'';if(!url&&!key)return null;if(!/^https:\/\/[^/]+\.supabase\.co$/.test(url)||!key||key.startsWith('sb_secret_'))throw new Error('Supabase 공개 연결 설정을 확인해 주세요.');return {url,key};}
 export async function createCloud(env){
@@ -31,19 +32,19 @@ export async function createCloud(env){
    const result=checked(response);if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);
   },
   async command(action,payload){if(!user)throw new Error('로그인이 필요합니다.');const identity=user.id;const result=checked(await client.rpc('pt_command',{action,payload}));if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);},
-  requireUser(){if(user)return true;const details=document.querySelector('#account-area details');if(details){details.open=true;document.getElementById('account-email')?.focus();}return false;},
+  requireUser(){if(user)return true;const details=document.querySelector('#account-area details');if(details){const menu=document.getElementById('settings');if(menu)menu.open=true;details.open=true;document.getElementById('account-email')?.focus();}return false;},
   pathFor(id,scope='game'){if(id.includes('/'))return id;if(!user)throw new Error('로그인이 필요합니다.');return `${scope}/${user.id}/${id}`;},
   async saveMedia(items){const uploaded=[];try{for(const item of items){const path=api.pathFor(item.id,item.scope);checked(await client.storage.from('playtest-media').upload(path,item.file,{contentType:item.type,upsert:false}));uploaded.push(path);}}catch(error){if(uploaded.length)await client.storage.from('playtest-media').remove(uploaded);throw error;}},
   async removeMedia(ids){if(ids.length)checked(await client.storage.from('playtest-media').remove(ids.map(id=>api.pathFor(id))));},
   async getMedia(id){return checked(await client.storage.from('playtest-media').download(id));},
   mountAccount(onRefresh,{signupPage=false}={}){
-   const root=document.getElementById('account-area');let disposed=false,manualAuth=false,refreshTimer,sentEmail='';
+   const root=document.getElementById('account-area'),dialogRoot=document.createElement('div');document.body.append(dialogRoot);let disposed=false,manualAuth=false,refreshTimer,sentEmail='';
    const service=createAccountService(client,location.origin);
    let mode=viewer.pendingDeletion?'delete':recoverySession?'recovery':currentUrl.searchParams.get('account')==='recovery'?'recover':'',deletion=viewer.deletionPreview||null,taskMessage=currentUrl.searchParams.get('account')==='recovery'&&callbackError?authErrorMessage({code:'otp_expired'}):'';
    function taskStatus(message){taskMessage=message;const el=document.getElementById('account-task-status');if(el)el.textContent=message;}
    function status(message){authStatus=message;const el=document.getElementById('account-status');if(el)el.textContent=message;}
-   function render(){if(disposed)return;const open=root.querySelector('.account-menu')?.open;root.innerHTML=signupPage?signupHtml(user,providers,authStatus,sentEmail):accountHtml(user,viewer,providers,authStatus,{mode,deletion,message:taskMessage});if(open||authStatus||currentUrl.searchParams.get('account')==='login')root.querySelector('.account-menu')?.setAttribute('open','');const dialog=document.getElementById('account-dialog');if(dialog){dialog.showModal();dialog.addEventListener('cancel',event=>{event.preventDefault();if(!manualAuth){mode='';taskMessage='';render();}});}}
-   function busy(value){root.querySelectorAll('[data-account-form] button,[data-account-task] button,[data-account],[data-social]').forEach(button=>{button.disabled=value||Boolean(button.dataset.social&&!providers[button.dataset.social]);});}
+   function render(){if(disposed)return;const open=root.querySelector('.account-menu')?.open;root.innerHTML=signupPage?signupHtml(user,providers,authStatus,sentEmail):accountHtml(user,viewer,providers,authStatus);if(open||authStatus||!user&&currentUrl.searchParams.get('account')==='login'){root.querySelector('.account-menu')?.setAttribute('open','');if(!signupPage&&!user)document.getElementById('settings').open=true;}dialogRoot.innerHTML=signupPage?'':accountDialogHtml(user,viewer,{mode,deletion,message:taskMessage});const dialog=document.getElementById('account-dialog');if(dialog){document.getElementById('settings').open=false;dialog.showModal();dialog.addEventListener('cancel',event=>{event.preventDefault();if(!manualAuth){mode='';taskMessage='';render();}});}}
+   function busy(value){[...root.querySelectorAll('[data-account-form] button,[data-account],[data-social]'),...dialogRoot.querySelectorAll('button')].forEach(button=>{button.disabled=value||Boolean(button.dataset.social&&!providers[button.dataset.social]);});}
    async function loadProviders(){
     try{const response=await fetch('/api/auth/providers',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!response.ok)throw new Error();const data=await response.json();providers={google:data.google===true,naver:data.naver===true,testMode:data.testMode!==false};}catch{providers={google:false,naver:false};}
     if(disposed)return;
@@ -87,7 +88,7 @@ export async function createCloud(env){
     try{if(action==='providers'){await loadProviders();return;}if(action==='logout'){manualAuth=true;const result=await client.auth.signOut({scope:'local'});if(result.error&&user)throw result.error;user=null;viewer={};mode='';deletion=null;recoverySession=false;await onRefresh(true);render();}else {await onRefresh(false);render();}}
     catch(error){if(user)window.alert(authErrorMessage(error));else status(authErrorMessage(error));}finally{manualAuth=false;}
    }
-   render();root.addEventListener('submit',submit);root.addEventListener('click',click);void loadProviders();
+   render();root.addEventListener('submit',submit);root.addEventListener('click',click);dialogRoot.addEventListener('submit',submit);dialogRoot.addEventListener('click',click);void loadProviders();
    const {data:{subscription}}=client.auth.onAuthStateChange((event,nextSession)=>{
     if(event==='PASSWORD_RECOVERY'){recoverySession=true;mode='recovery';}
     const previous=user?.id;user=nextSession?.user||null;const changed=previous!==user?.id;if(changed)viewer={};
@@ -97,7 +98,7 @@ export async function createCloud(env){
     clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{if(disposed)return;render();try{await onRefresh(changed);render();}catch(error){status(authErrorMessage(error));}},0);
    });
    earlyAuth.data.subscription.unsubscribe();
-   return ()=>{disposed=true;clearTimeout(refreshTimer);root.removeEventListener('submit',submit);root.removeEventListener('click',click);subscription.unsubscribe();};
+   return ()=>{disposed=true;clearTimeout(refreshTimer);root.removeEventListener('submit',submit);root.removeEventListener('click',click);dialogRoot.remove();subscription.unsubscribe();};
   }
  };
  return api;
