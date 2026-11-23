@@ -1,4 +1,5 @@
 export default {
+  "선택 완료": "Done",
   "장르 선택": "Select genres",
   "그 외": "Other",
   "장르 직접 입력": "Custom genres",

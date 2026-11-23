@@ -408,16 +408,19 @@ function devForm(){
               <span>장르 선택</span>
               <span class="genre-chevron" aria-hidden="true">⌄</span>
             </summary>
-            <div class="genre-options">
-              ${[...GENRES,OTHER_GENRE].map(genre=>`<label class="check"><input type="checkbox" name="f-genres" ${genre===OTHER_GENRE?'id="f-other"':''} value="${genre}" ${(genre===OTHER_GENRE?customGenres.length:genres.includes(genre))?'checked':''}><span>${genre}</span></label>`).join('')}
+            <div class="genre-dropdown">
+              <div class="genre-options">
+                ${[...GENRES,OTHER_GENRE].map(genre=>`<label class="check"><input type="checkbox" name="f-genres" ${genre===OTHER_GENRE?'id="f-other"':''} value="${genre}" ${(genre===OTHER_GENRE?customGenres.length:genres.includes(genre))?'checked':''}><span>${genre}</span></label>`).join('')}
+              </div>
+              <div class="field" id="other-genre-field" ${customGenres.length?'':'hidden'}>
+                <label for="f-other-genres">장르 직접 입력</label>
+                <input type="text" id="f-other-genres" value="${esc(customGenres.join(', '))}" aria-describedby="genre-hint" ${customGenres.length?'':'disabled'}>
+                <p id="genre-hint" class="hint">여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.</p>
+              </div>
+              <div class="genre-dropdown-actions"><button class="btn ghost sm" type="button" data-act="close-genre-picker">선택 완료</button></div>
             </div>
           </details>
           <div class="selected-genre-tags" id="selected-genre-tags" aria-live="polite">${genreTags(customGenres.length?[...genres,OTHER_GENRE]:genres)}</div>
-          <div class="field" id="other-genre-field" ${customGenres.length?'':'hidden'}>
-            <label for="f-other-genres">장르 직접 입력</label>
-            <input type="text" id="f-other-genres" value="${esc(customGenres.join(', '))}" aria-describedby="genre-hint" ${customGenres.length?'':'disabled'}>
-            <p id="genre-hint" class="hint">여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.</p>
-          </div>
         </fieldset>
         <div class="field"><label for="f-platform">플랫폼</label><select id="f-platform">${opts(PLATFORMS,e&&e.platform)}</select></div>
         <div class="field"><label for="f-build">빌드 버전</label><input type="text" id="f-build" value="${e?esc(e.build):'v0.1.0'}" maxlength="16"></div>
@@ -573,6 +576,8 @@ async function handleCloudClick(action,button,event){
 }
 listen(document,'click',async e=>{
   const notifications=$('#notification-area details');if(notifications&&!notifications.contains(e.target))notifications.open=false;
+  const genrePicker=$('#genre-picker');
+  if(genrePicker?.open&&!genrePicker.contains(e.target))genrePicker.open=false;
   if(ui.saving&&e.target.closest('[data-nav],[data-act]')){e.preventDefault();return toast('저장 중입니다. 잠시 기다려 주세요.');}
   const n=e.target.closest('[data-nav]');
   if(n){e.preventDefault();return nav(n.dataset.nav,n.dataset.sub)}
@@ -677,6 +682,11 @@ listen(document,'click',async e=>{
     r.status='declined';
     if(r.id==='me'&&S.mine[t.id])S.mine[t.id].status='declined';
     save();render();return toast(`${r.name}님의 신청을 거절했습니다.`);
+  }
+  if(a==='close-genre-picker'){
+    genrePicker.open=false;
+    genrePicker.querySelector('summary').focus();
+    return;
   }
   if(a==='capacity-step'){
     const input=$('#f-slots');
@@ -893,6 +903,17 @@ listen(window,'pagehide',()=>{void persistDeveloperDraft();});
 listen(document,'visibilitychange',()=>{if(document.visibilityState==='hidden')void persistDeveloperDraft();});
 const deadlineTimer=typeof window.setInterval==='function'?window.setInterval(refreshDeadlines,60000):null;
 listen(window,'focus',refreshDeadlines);
-listen(document,'keydown',e=>{if(e.key==='Escape'){const el=$('#notification-area details');if(el?.open){el.open=false;el.querySelector('summary').focus();}}});
+listen(document,'keydown',e=>{
+  if(e.key!=='Escape')return;
+  const picker=e.target.closest?.('#genre-picker[open]');
+  if(picker){
+    e.preventDefault();
+    picker.open=false;
+    picker.querySelector('summary').focus();
+    return;
+  }
+  const notifications=$('#notification-area details');
+  if(notifications?.open){notifications.open=false;notifications.querySelector('summary').focus();}
+});
 return ()=>{void persistDeveloperDraft();clearTimeout(draftTimer);disposeAccount?.();controller.abort();if(deadlineTimer)clearInterval(deadlineTimer);clearUploads();mediaHydrator.dispose();};
 }
