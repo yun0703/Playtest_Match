@@ -8,6 +8,9 @@ globalThis.localStorage={getItem(){return null},setItem(){}};
 for(const target of [document,window])target.addEventListener=(type,fn)=>{handlers[type]=fn};
 const dispose=initialize();
 for(const page of ['home','tester','developer','admin']){location.hash='#'+page;handlers.hashchange();if(!elements.get('#main').innerHTML.length)throw Error('Empty '+page);console.log('PASS render '+page);}
+location.hash='#tester';handlers.hashchange();
+await handlers.click({target:{closest:s=>s==='[data-act]'?{dataset:{act:'tab-t',tab:'alerts'}}:null}});
+if(!elements.get('#main').innerHTML.includes('notification-page'))throw Error('Tester alerts did not render in the main view');
 location.hash='#home';handlers.hashchange();
 const html=elements.get('#main').innerHTML;
 const id=[...html.matchAll(/data-act="open" data-id="([^"]+)"/g)].map(match=>match[1]).find(id=>id==="t3");
@@ -26,6 +29,9 @@ location.hash='#developer';
 const disposeCloud=initialize({cloud,initialState:{tests:[]}});
 await handlers.click({target:{closest:selector=>selector==='[data-act]'?{dataset:{act:'tab-d',tab:'new'},disabled:false}:null},preventDefault(){}});
 if(!elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Member cannot publish');
+for(const mark of ['id="f-other"','id="f-other-genres"','id="f-limited"','id="f-unlimited"','data-act="capacity-step"']){
+  if(!elements.get('#main').innerHTML.includes(mark))throw Error('Missing registration control: '+mark);
+}
 cloud.user=null;
 await refreshAccount(true);
 if(location.hash!=='#home')throw Error('Signed-out route disagrees with the screen');

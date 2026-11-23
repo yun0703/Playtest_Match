@@ -1,5 +1,5 @@
 import {buildVersions,filterBuild,feedbackQuestions,versionValue} from './feedback-tools.js';
-import {GENRES} from './genres.js';
+import {GENRES,OTHER_GENRE,gameGenreSelection,matchesGenre} from './genres.js';
 import {developerDrafts,draftRecord,draftKey} from './developer-drafts.js';
 import {surveyCsv,bugsCsv,downloadCsv} from './result-export.js';
 import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES,unlimitedCapacity,capacityFull,remainingCapacity,capacityValidation,maximumDeadline,deadlineValidation,recruitmentOpen} from './playtest-features.js';
@@ -128,10 +128,37 @@ const allNotifications=()=>[...deadlineNotifications(S),...S.notifications].slic
 function renderNotifications(){const el=$('#notification-area');if(el){const open=el.querySelector('details')?.open;el.innerHTML=notificationsHtml(allNotifications(),S);if(open)el.querySelector('details').open=true;}}
 function clearUploads(){releaseStaged((ui.mediaDraft||[]).filter(x=>x.file));releaseStaged(ui.bugMedia);ui.mediaDraft=null;ui.bugMedia=[];}
 let draftTimer,draftRevision=0,draftPending=Promise.resolve(),draftOwner=cloud?.user?.id||(!cloud?'local':'');
-const DEV_FIELDS=['f-title','f-team','f-genre','f-platform','f-build','f-min','f-slots','f-deadline','f-vis','f-code','f-focus','f-teaser','f-link','f-how'];
+const DEV_FIELDS=['f-title','f-team','f-other-genres','f-platform','f-build','f-min','f-slots','f-deadline','f-vis','f-code','f-focus','f-teaser','f-link','f-how'];
 function currentDraftOwner(){return cloud?.user?.id||(!cloud?'local':'');}
-function captureDevFields(){const form=$('[data-form="dev"]');if(!form)return false;ui.devFields=Object.fromEntries(DEV_FIELDS.map(id=>[id,$('#'+id).value]));ui.devFields['f-unlimited']=$('#f-unlimited').checked;return true;}
-function restoreDevFields(){if(!ui.devFields||!$('[data-form="dev"]'))return;for(const id of DEV_FIELDS)if($('#'+id))$('#'+id).value=ui.devFields[id]??'';$('#f-unlimited').checked=!!ui.devFields['f-unlimited'];$('#f-slots').disabled=$('#f-unlimited').checked;$('#code-field').hidden=$('#f-vis').value!=='invite';$('#vis-desc').textContent=VIS_DESC[$('#f-vis').value]||'';}
+function selectedGenres(){
+  return [...document.querySelectorAll('[name="f-genres"]:checked')].map(input=>input.value);
+}
+function updateDevSelectors(){
+  const unlimited=$('#f-unlimited').checked;
+  $('#f-slots').disabled=unlimited;
+  $('#capacity-stepper').hidden=unlimited;
+  const other=$('#f-other').checked;
+  $('#other-genre-field').hidden=!other;
+  $('#f-other-genres').disabled=!other;
+}
+function captureDevFields(){
+  if(!$('[data-form="dev"]'))return false;
+  ui.devFields=Object.fromEntries(DEV_FIELDS.map(id=>[id,$('#'+id).value]));
+  ui.devFields['f-genres']=selectedGenres();
+  ui.devFields['f-unlimited']=$('#f-unlimited').checked;
+  return true;
+}
+function restoreDevFields(){
+  if(!ui.devFields||!$('[data-form="dev"]'))return;
+  for(const id of DEV_FIELDS)if(Object.hasOwn(ui.devFields,id))$('#'+id).value=ui.devFields[id];
+  const genres=ui.devFields['f-genres']??[ui.devFields['f-genre']];
+  document.querySelectorAll('[name="f-genres"]').forEach(input=>{input.checked=genres.includes(input.value);});
+  $('#f-unlimited').checked=!!ui.devFields['f-unlimited'];
+  $('#f-limited').checked=!$('#f-unlimited').checked;
+  updateDevSelectors();
+  $('#code-field').hidden=$('#f-vis').value!=='invite';
+  $('#vis-desc').textContent=VIS_DESC[$('#f-vis').value]||'';
+}
 function draftStatus(message){ui.draftStatus=message;const node=$('#draft-status');if(node)node.textContent=message;}
 async function loadDeveloperDrafts(){const owner=currentDraftOwner();if(!owner)return;try{const records=await developerDrafts.list(owner);if(owner!==currentDraftOwner())return;ui.savedDrafts=records.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));}catch{ui.savedDrafts=[];}finally{ui.draftReady=true;}}
 async function persistDeveloperDraft(force=false){clearTimeout(draftTimer);if(!force&&!ui.draftDirty)return true;if(!captureDevFields()||!currentDraftOwner())return true;syncDraft();const revision=draftRevision,owner=currentDraftOwner(),record=draftRecord(owner,ui.edit,ui.devFields,ui.draft||[],ui.mediaDraft||[]);draftStatus('임시 저장 중…');draftPending=draftPending.catch(()=>{}).then(()=>developerDrafts.save(record));try{await draftPending;if(owner!==currentDraftOwner())return;ui.savedDrafts=[record,...ui.savedDrafts.filter(d=>d.key!==record.key)];if(revision===draftRevision)ui.draftDirty=false;draftStatus('임시 저장 완료');return true;}catch{draftStatus('임시 저장에 실패했습니다. 저장 공간과 브라우저 설정을 확인해 주세요.');return false;}}
@@ -173,19 +200,23 @@ function bugSummaries(){return cloud?S.bugSummaries:S.bugs.map(b=>({id:b.id,test
 function selectedBugIds(form){const choice=form.querySelector('[name="problem-choice"]:checked')?.value;return [...form.querySelectorAll(`[data-link-choice="${choice}"] [name="linked-bugs"]:checked`)].map(el=>el.value);}
 function updateDuplicates(){const form=$('[data-form="bug"]'),node=$('#similar-bugs');if(form&&node)node.innerHTML=duplicateBugHtml($('#bug-title').value,bugSummaries(),form.dataset.id,$('#bug-build').value);}
 function versionFilterHtml(t,kind){const selected=(kind==='survey'?ui.resultBuild:ui.bugBuild)[t.id]||'all',items=kind==='survey'?t.feedbacks:S.bugs.filter(b=>b.testId===t.id);return `<div class="version-filter"><label for="version-${kind}-${t.id}">빌드 버전별 보기</label><select id="version-${kind}-${t.id}" data-version-kind="${kind}" data-test-id="${t.id}"><option value="all" ${selected==='all'?'selected':''}>전체 버전</option>${buildVersions(t,S.bugs).map(v=>`<option value="${esc(versionValue(v))}" ${selected===versionValue(v)?'selected':''} data-no-translate>${esc(v)}</option>`).join('')}${items.some(item=>!item.build)?`<option value="legacy" ${selected==='legacy'?'selected':''}>버전 미기록</option>`:''}</select></div>`;}
+function gameGenreHtml(t){
+ const {genres,customGenres}=gameGenreSelection(t);
+ return [...genres.map(genre=>`<span>${esc(genre)}</span>`),...customGenres.map(genre=>`<span data-no-translate>${esc(genre)}</span>`)].join('<span aria-hidden="true"> · </span>');
+}
 function gameCard(t){
  const m=S.mine[t.id],full=t.status!=='open'||capacityFull(t)||deadlineState(t.deadline)==='overdue';
- return `<article class="card game-card"><button class="cover-button" type="button" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><div class="card-body"><div class="row"><span class="genre-label">${esc(t.genre)}</span>${visBadge(t.vis)}</div>${favoriteButton(t)}<h3 data-no-translate>${esc(t.title)}</h3><p class="team" data-no-translate>${esc(t.team)}</p><p class="teaser" data-no-translate>${esc(t.teaser)}</p>${focusHtml(t,true)}<div class="card-meta"><span>${esc(t.platform)}</span><span>◷ ${t.minutes}분</span></div><div class="foot">${deadlineHtml(t)}${slotsHtml(t)}<button class="btn ghost card-join" type="button" data-act="open" data-id="${t.id}">${m?MINE_LABEL[m.status]:full?'모집 마감':'테스트 참여하기'} <span>→</span></button></div></div></article>`;
+ return `<article class="card game-card"><button class="cover-button" type="button" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><div class="card-body"><div class="row"><span class="genre-label">${gameGenreHtml(t)}</span>${visBadge(t.vis)}</div>${favoriteButton(t)}<h3 data-no-translate>${esc(t.title)}</h3><p class="team" data-no-translate>${esc(t.team)}</p><p class="teaser" data-no-translate>${esc(t.teaser)}</p>${focusHtml(t,true)}<div class="card-meta"><span>${esc(t.platform)}</span><span>◷ ${t.minutes}분</span></div><div class="foot">${deadlineHtml(t)}${slotsHtml(t)}<button class="btn ghost card-join" type="button" data-act="open" data-id="${t.id}">${m?MINE_LABEL[m.status]:full?'모집 마감':'테스트 참여하기'} <span>→</span></button></div></div></article>`;
 }
 function filteredTests(list){
- let result=list.filter(t=>(ui.genre==='전체'||t.genre===ui.genre)&&(ui.platform==='all'||t.platform===ui.platform)&&(!ui.search||[t.title,t.team,t.teaser,t.genre,t.feedbackFocus].join(' ').toLocaleLowerCase().includes(ui.search.toLocaleLowerCase())));
+ let result=list.filter(t=>matchesGenre(t,ui.genre)&&(ui.platform==='all'||t.platform===ui.platform)&&(!ui.search||[t.title,t.team,t.teaser,...Object.values(gameGenreSelection(t)).flat(),t.feedbackFocus].join(' ').toLocaleLowerCase().includes(ui.search.toLocaleLowerCase())));
  if(ui.sort==='short')result.sort((a,b)=>a.minutes-b.minutes);
  if(ui.sort==='seats')result.sort((a,b)=>(remainingCapacity(b)-remainingCapacity(a))||0);
  if(ui.sort==='new')result.reverse();
  return result;
 }
 function catalogTools(){return `<div class="catalog-tools"><form data-form="search" class="search-form"><label class="sr-only" for="game-search">게임 검색</label><input id="game-search" type="search" name="search" value="${esc(ui.search)}" placeholder="게임, 개발팀 검색" autocomplete="off"><button type="submit" aria-label="검색">⌕</button></form><div class="catalog-selects"><label class="sr-only" for="platform-filter">플랫폼</label><select id="platform-filter"><option value="all" ${ui.platform==='all'?'selected':''}>모든 플랫폼</option>${PLATFORMS.map(p=>`<option value="${p}" ${ui.platform===p?'selected':''}>${p}</option>`).join('')}</select><label class="sr-only" for="sort-filter">정렬</label><select id="sort-filter">${[['default','등록 순'],['new','최근 등록 순'],['short','짧은 플레이 시간 순'],['seats','남은 자리 많은 순']].map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${l}</option>`).join('')}</select></div></div>`;}
-function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}<span>${tests.filter(t=>t.genre===g).length}</span></button>`;return GENRES.slice(0,8).map(button).join('')+`<details class="more-genres" ${GENRES.slice(8).includes(ui.genre)?'open':''}><summary>장르 더 보기</summary><div>${GENRES.slice(8).map(button).join('')}</div></details>`;}
+function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}<span>${tests.filter(t=>matchesGenre(t,g)).length}</span></button>`;return GENRES.slice(0,8).map(button).join('')+`<details class="more-genres" ${[...GENRES.slice(8),OTHER_GENRE].includes(ui.genre)?'open':''}><summary>장르 더 보기</summary><div>${GENRES.slice(8).map(button).join('')}</div></details>${button(OTHER_GENRE)}`;}
 function workspace(side,body){
  return `<div class="store-layout"><aside class="store-sidebar">${side}</aside><div class="store-content">${body}</div></div>`;
 }
@@ -197,14 +228,14 @@ function featureQuestion(t){
  return t.feedbackFocus?`<div class="hero-question"><b>개발자의 질문</b><p data-no-translate>${esc(t.feedbackFocus)}</p></div>`:'';
 }
 function catalogRow(t){
- return `<article class="catalog-row"><button class="row-cover" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><button class="row-title" data-act="open" data-id="${t.id}" data-no-translate>${esc(t.title)}</button><div class="row-facts"><span>${esc(t.genre)}</span><span>${esc(t.platform)}</span><span>${t.minutes}분</span></div>${slotsHtml(t)}${deadlineHtml(t)}${favoriteButton(t)}</article>`;
+ return `<article class="catalog-row"><button class="row-cover" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><button class="row-title" data-act="open" data-id="${t.id}" data-no-translate>${esc(t.title)}</button><div class="row-facts"><span>${gameGenreHtml(t)}</span><span>${esc(t.platform)}</span><span>${t.minutes}분</span></div>${slotsHtml(t)}${deadlineHtml(t)}${favoriteButton(t)}</article>`;
 }
 function renderHome(){
  const tests=S.tests.filter(t=>recruitmentOpen(t));
  const featured=tests.find(t=>t.id===ui.featured)||tests[0];
  const list=filteredTests(tests);
  const side=`<h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임</button><button class="side-link" data-act="show-favorites">찜한 게임</button><h3>장르</h3>${homeGenresHtml(tests)}`;
- const hero=featured?`<div><p class="genre-label">${esc(featured.genre)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>PlayTest Match</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
+ const hero=featured?`<div><p class="genre-label">${gameGenreHtml(featured)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>PlayTest Match</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
  const picks=tests.length>1?`<div class="feature-links">${tests.slice(0,4).map(t=>`<button data-act="feature" data-id="${t.id}" aria-pressed="${featured.id===t.id}" data-no-translate>${esc(t.title)}</button>`).join('')}</div>`:'';
  return workspace(side,`<section class="spotlight" aria-label="인디게임 플레이테스트">${hero}</section>${picks}<section class="recruit-section"><div class="section-heading"><h2>모집 중인 테스트</h2><button class="text-link" data-act="clear-filters">필터 초기화</button></div>${catalogTools()}${list.length?list.map(catalogRow).join(''):`<div class="empty">${tests.length?'검색 조건에 맞는 테스트가 없습니다.':'현재 모집 중인 테스트가 없습니다.'}</div>`}</section>`);
 }
@@ -220,9 +251,10 @@ function renderTester(){
   if(ui.detail){const d=byId(ui.detail);if(d&&visibleTo(d))return renderDetail(d)}
   const open=S.tests.filter(t=>recruitmentOpen(t));
   const mineList=S.tests.filter(t=>t.owner!=='me'&&S.mine[t.id]),favorites=S.tests.filter(t=>S.favorites.includes(t.id)&&['open','closed'].includes(t.status));
-  const genres=['전체',...GENRES.filter(g=>open.some(t=>t.genre===g))];
+  const genres=['전체',...GENRES.filter(g=>open.some(t=>matchesGenre(t,g))),OTHER_GENRE];
   const list=ui.tTab==='mine'?mineList:filteredTests(ui.tTab==='saved'?favorites:open);
-  const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중']])+'<button class="side-link" data-act="tester-alerts">알림</button>';
+  const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중'],['alerts','알림']]);
+  if(ui.tTab==='alerts')return workspace(side,notificationsHtml(allNotifications(),S,{page:true}));
   const chips=ui.tTab==='open'?`<div class="sub" aria-label="장르 필터">${genres.map(g=>`<button type="button" class="chip" data-act="genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}</button>`).join('')}</div>`:'';
   const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="participant-art">${gameArt(t)}</div><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
   const empty=ui.tTab==='saved'?'찜한 게임이 없습니다. 게임 카드의 하트를 눌러 모아보세요.':ui.tTab==='mine'?'아직 신청한 테스트가 없습니다. 모집 중 탭에서 플레이해 보고 싶은 게임을 골라 보세요.':'조건에 맞는 테스트가 없습니다.';
@@ -256,7 +288,7 @@ function renderDetail(t){
     :`<div class="lock"><span class="mono">LOCKED</span><p>플레이 방법, 설문 문항, 빌드 링크는 이용 동의 후 참여가 열리면 공개됩니다.</p></div>`;
   const info=`${progressHtml(t,m)}${focusHtml(t)}${t.media.length?galleryHtml(t,ui.gallery):`<div class="detail-cover">${gameArt(t)}</div>`}<div class="panel"><div class="row"><div class="stack" style="gap:4px"><h2 data-no-translate>${esc(t.title)}</h2><p class="muted">${esc(t.team)}</p></div><span class="pair">${own?'<span class="badge b-mine">내 테스트</span>':''}${t.status!=='open'?tBadge(t.status):''}${visBadge(t.vis)}</span></div>
     ${favoriteButton(t)}<p data-no-translate>${esc(t.teaser)}</p>
-    <dl class="facts"><dt>BUILD</dt><dd class="mono">${esc(t.build)}</dd><dt>PLATFORM</dt><dd>${esc(t.platform)}</dd><dt>GENRE</dt><dd>${esc(t.genre)}</dd><dt>TIME</dt><dd>약 ${t.minutes}분</dd><dt>SLOTS</dt><dd>${slotsHtml(t)}</dd><dt>ACCESS</dt><dd>${VIS[t.vis]} · ${VIS_DESC[t.vis]}</dd></dl>
+    <dl class="facts"><dt>BUILD</dt><dd class="mono">${esc(t.build)}</dd><dt>PLATFORM</dt><dd>${esc(t.platform)}</dd><dt>GENRE</dt><dd>${gameGenreHtml(t)}</dd><dt>TIME</dt><dd>약 ${t.minutes}분</dd><dt>SLOTS</dt><dd>${slotsHtml(t)}</dd><dt>ACCESS</dt><dd>${VIS[t.vis]} · ${VIS_DESC[t.vis]}</dd></dl>
     ${deadlineHtml(t)}${guarded}</div>`;
   let side;
   if(own)side='<div class="notice">내가 등록한 게임에는 테스터로 참여할 수 없습니다.</div>';
@@ -346,6 +378,8 @@ function syncDraft(){
 }
 function devForm(){
   const e=ui.edit?byId(ui.edit):null;
+  const {genres,customGenres}=gameGenreSelection(e);
+  const unlimited=!!e&&unlimitedCapacity(e);
   if(!ui.draft)ui.draft=e?clone(e.survey):defaultSurvey();
   if(ui.mediaDraft===null)ui.mediaDraft=e?clone(e.media):[];
   const v=k=>e?esc(e[k]):'';
@@ -360,11 +394,11 @@ function devForm(){
       <fieldset class="group"><legend>기본 정보</legend><div class="fields">
         <div class="field"><label for="f-title">게임 이름</label><input type="text" id="f-title" value="${v('title')}" maxlength="40"></div>
         <div class="field"><label for="f-team">팀 이름</label><input type="text" id="f-team" value="${v('team')}" maxlength="40"></div>
-        <div class="field"><label for="f-genre">장르</label><select id="f-genre">${opts(GENRES,e&&e.genre)}</select></div>
+        <fieldset class="field"><legend>장르</legend><div class="genre-options">${[...GENRES,OTHER_GENRE].map(genre=>`<label class="check"><input type="checkbox" name="f-genres" ${genre===OTHER_GENRE?'id="f-other"':''} value="${genre}" ${(genre===OTHER_GENRE?customGenres.length:genres.includes(genre))?'checked':''}><span>${genre}</span></label>`).join('')}</div><div class="field" id="other-genre-field" ${customGenres.length?'':'hidden'}><label for="f-other-genres">장르 직접 입력</label><input type="text" id="f-other-genres" value="${esc(customGenres.join(', '))}" aria-describedby="genre-hint" ${customGenres.length?'':'disabled'}><p id="genre-hint" class="hint">여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.</p></div></fieldset>
         <div class="field"><label for="f-platform">플랫폼</label><select id="f-platform">${opts(PLATFORMS,e&&e.platform)}</select></div>
         <div class="field"><label for="f-build">빌드 버전</label><input type="text" id="f-build" value="${e?esc(e.build):'v0.1.0'}" maxlength="16"></div>
         <div class="field"><label for="f-min">예상 소요 시간 (분)</label><input type="number" id="f-min" min="5" max="120" value="${e?e.minutes:20}"></div>
-        <div class="field"><label for="f-slots">모집 인원</label><input type="number" id="f-slots" min="1" max="50" step="1" value="${e?.slots??5}" ${e&&unlimitedCapacity(e)?'disabled':''} aria-describedby="capacity-hint"><label class="check"><input type="checkbox" id="f-unlimited" ${e&&unlimitedCapacity(e)?'checked':''}><span>인원 제한 없음</span></label><span class="hint" id="capacity-hint">인원 지정 시 1~50명 · 제한이 없으면 마감일까지 신청을 받습니다.</span></div>
+        <fieldset class="field"><legend>모집 인원</legend><div class="capacity-modes"><label class="check"><input type="radio" name="capacity-mode" id="f-limited" ${unlimited?'':'checked'}><span>인원 지정</span></label><label class="check"><input type="radio" name="capacity-mode" id="f-unlimited" ${unlimited?'checked':''}><span>인원 제한 없음</span></label></div><div class="capacity-stepper" id="capacity-stepper" ${unlimited?'hidden':''}><button class="btn ghost" type="button" data-act="capacity-step" data-step="-1" aria-label="인원 줄이기">−</button><input type="number" id="f-slots" aria-label="모집 인원" min="1" max="50" step="1" value="${e?.slots??5}" ${unlimited?'disabled':''} aria-describedby="capacity-hint"><button class="btn ghost" type="button" data-act="capacity-step" data-step="1" aria-label="인원 늘리기">+</button></div><p class="hint" id="capacity-hint">인원 지정 시 1~50명 · 제한이 없으면 마감일까지 신청을 받습니다.</p></fieldset>
         <div class="field"><label for="f-deadline">모집·피드백 마감일</label><input type="date" id="f-deadline" value="${e?esc(e.deadline||deadlineMax):dateAfterDays(7)}" min="${e?.deadline&&e.deadline<today()?esc(e.deadline):today()}" max="${deadlineMax}" required aria-describedby="deadline-hint"><span class="hint" id="deadline-hint">모든 테스트 필수 · 최초 등록일부터 최대 두 달 · 한국 시간 23:59 마감</span></div>
       </div></fieldset>
       <fieldset class="group"><legend>스크린샷 · 영상</legend><p class="hint">스크린샷 최대 6장(각 5MB), 영상 최대 1개(50MB). 공개 소개에 표시됩니다.</p><label for="f-media">미디어 파일 추가</label><input id="f-media" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"><p class="hint">PNG · JPG · WebP · GIF / MP4 · WebM</p><p id="media-error" class="err" role="alert"></p><div id="media-preview">${mediaEditor(ui.mediaDraft)}</div></fieldset>
@@ -399,7 +433,7 @@ function myTestCard(t){
   else body=`${slotsHtml(t)}<div class="actions"><button class="btn" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost recruitment-control" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${versionFilterHtml(t,'survey')}<div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
   const rc=S.reports.filter(r=>r.testId===t.id&&r.status==='open').length;
   return `<details class="managed-entry" data-game="${t.id}"><summary><div class="managed-thumb">${gameArt(t)}</div><strong data-no-translate>${esc(t.title)}</strong>${tBadge(t.status)}<span class="game-disclosure" aria-hidden="true">⌄</span></summary><article class="card managed-game"><div class="managed-art">${gameArt(t)}</div><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
-    <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${esc(t.genre)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="managed-deadline">${deadlineHtml(t)}</div></div><div class="foot manage-controls">${body}<div class="actions game-delete-actions">${remove}</div></div></article></details>`;
+    <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${gameGenreHtml(t)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="managed-deadline">${deadlineHtml(t)}</div></div><div class="foot manage-controls">${body}<div class="actions game-delete-actions">${remove}</div></div></article></details>`;
 }
 function renderDeveloper(){
   const mine=S.tests.filter(t=>t.owner==='me');
@@ -418,7 +452,7 @@ function renderDeveloper(){
 
 /* ---------- admin ---------- */
 function testInfo(t){
-  return `<div class="row"><div class="stack" style="gap:4px"><h3 data-no-translate>${esc(t.title)}</h3><p class="muted">${esc(t.team)} · ${esc(t.genre)} · ${esc(t.platform)} · <span class="mono">${esc(t.build)}</span></p></div><span class="pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
+  return `<div class="row"><div class="stack" style="gap:4px"><h3 data-no-translate>${esc(t.title)}</h3><p class="muted">${esc(t.team)} · ${gameGenreHtml(t)} · ${esc(t.platform)} · <span class="mono">${esc(t.build)}</span></p></div><span class="pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
     <p data-no-translate>${esc(t.teaser)}</p><dl class="facts"><dt>LINK</dt><dd class="mono">${esc(t.link)}</dd><dt>HOW</dt><dd>${esc(t.how)}</dd></dl>`;
 }
 function hideBox(t){
@@ -500,7 +534,7 @@ async function handleCloudClick(action,button,event){
  const id=button.dataset.id;
  if(action==='account-login'){cloud.requireUser();return true;}
  if(action==='reset'){toast('실서비스 데이터는 초기화할 수 없습니다.');return true;}
- if(action==='open-notification'){const notice=allNotifications().find(n=>n.id===id);if(notice&&await remoteCommand('mark_read',{ids:[id]})){nav('tester','mine');ui.detail=notice.testId;render();}return true;}
+ if(action==='open-notification'){const notice=allNotifications().find(n=>n.id===id);if(notice&&await remoteCommand('mark_read',{ids:[id]})){nav('tester',ui.page==='tester'&&ui.tTab==='alerts'?'alerts':'mine');ui.detail=notice.testId;render();}return true;}
  const handlers={
   'start-play':()=>['start_play',{testId:id}],
   'toggle-close':()=>['toggle_close',{testId:id}],
@@ -520,7 +554,6 @@ listen(document,'click',async e=>{
   if(n){e.preventDefault();return nav(n.dataset.nav,n.dataset.sub)}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
   const a=b.dataset.act,id=b.dataset.id;
-  if(a==='tester-alerts'){if(notifications){notifications.open=true;notifications.querySelector('summary')?.focus();}return;}
   if(a==='play-next'){
     const application=S.mine[id];if(!application||application.status!=='applied')return;
     if(!application.startedAt){
@@ -552,8 +585,8 @@ listen(document,'click',async e=>{
   if(a==='bug-file-remove'){releaseStaged(ui.bugMedia);ui.bugMedia=[];updateBugPreview();return;}
   if(a==='media-select'){ui.gallery=id;const t=byId(ui.detail);const el=$('#detail-gallery');if(t&&el){el.outerHTML=galleryHtml(t,id);mediaHydrator.hydrate($('#main'));}return;}
   if(a==='start-play'){const m=S.mine[id];if(m?.status==='applied'){m.startedAt=new Date().toISOString();m.playedBuild=byId(id).build;save();const el=$(`[data-progress-id="${id}"]`);if(el)el.outerHTML=progressHtml(byId(id),m);}return;}
-  if(a==='read-notifications'){allNotifications().forEach(n=>S.readNotifications[n.id]=true);save();renderNotifications();return;}
-  if(a==='open-notification'){const n=allNotifications().find(n=>n.id===id);if(n){S.readNotifications[id]=true;save();nav('tester','mine');ui.detail=n.testId;render();}return;}
+  if(a==='read-notifications'){allNotifications().forEach(n=>S.readNotifications[n.id]=true);save();render();return;}
+  if(a==='open-notification'){const n=allNotifications().find(n=>n.id===id);if(n){S.readNotifications[id]=true;save();nav('tester',ui.page==='tester'&&ui.tTab==='alerts'?'alerts':'mine');ui.detail=n.testId;render();}return;}
   if(a==='home-genre' ||a==='catalog-genre'){ui.genre=b.dataset.genre;render();return;}
   if(a==='feature'){ui.featured=id;render();return;}
   if(a==='clear-filters'){ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
@@ -621,6 +654,14 @@ listen(document,'click',async e=>{
     if(r.id==='me'&&S.mine[t.id])S.mine[t.id].status='declined';
     save();render();return toast(`${r.name}님의 신청을 거절했습니다.`);
   }
+  if(a==='capacity-step'){
+    const input=$('#f-slots');
+    if(!input||input.disabled)return;
+    const current=Math.trunc(input.valueAsNumber||1);
+    input.value=String(Math.min(50,Math.max(1,current+Number(b.dataset.step))));
+    queueDeveloperDraft();
+    return;
+  }
   if(a==='option-add'||a==='option-remove'){
     syncDraft();
     const options=ui.draft[+b.dataset.i].options;
@@ -666,9 +707,7 @@ listen(document,'change',e=>{
     if(c)c.hidden=e.target.value!=='invite';
     if(d)d.textContent=VIS_DESC[e.target.value]||'';
   }
-  if(e.target.id==='f-unlimited'){
-    $('#f-slots').disabled=e.target.checked;
-  }
+  if(e.target.name==='capacity-mode'||e.target.id==='f-other')updateDevSelectors();
   if(e.target.classList&&e.target.classList.contains('q-type')){syncDraft();renderSurvey()}
 });
 
@@ -755,7 +794,16 @@ listen(document,'submit',async e=>{
     await persistDeveloperDraft();
     syncDraft();
     const g=id=>$('#'+id).value.trim(),err=$('#dev-err');
-    const d={title:g('f-title'),team:g('f-team'),genre:g('f-genre'),platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:$('#f-unlimited').checked?null:+g('f-slots'),
+    const selection=selectedGenres();
+    const genres=selection.filter(genre=>genre!==OTHER_GENRE);
+    const customGenres=$('#f-other').checked?g('f-other-genres').split(',').map(value=>value.trim()).filter(Boolean):[];
+    if(!genres.length&&!customGenres.length||$('#f-other').checked&&!customGenres.length){
+      err.textContent='장르를 선택하고, 그 외를 선택했다면 장르를 직접 입력해 주세요.';return;
+    }
+    if(customGenres.length>5||customGenres.some(genre=>[...genre].length>24||/[\x00-\x1f\x7f]/.test(genre)||GENRES.includes(genre)||genre===OTHER_GENRE)||new Set(customGenres.map(genre=>genre.toLowerCase())).size!==customGenres.length){
+      err.textContent='기본 장르와 겹치지 않는 서로 다른 장르를 최대 5개, 각 24자까지 입력해 주세요.';return;
+    }
+    const d={title:g('f-title'),team:g('f-team'),genre:genres[0]||OTHER_GENRE,genres,customGenres,platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:$('#f-unlimited').checked?null:+g('f-slots'),
       feedbackFocus:g('f-focus'),deadline:g('f-deadline'),vis:g('f-vis'),code:g('f-code').toUpperCase(),teaser:g('f-teaser'),link:g('f-link'),how:g('f-how')};
     if((!ui.edit||d.feedbackFocus)&& (d.feedbackFocus.length<10||d.feedbackFocus.length>600)){err.textContent='확인할 점은 10~600자로 입력해 주세요.';return;}
     const deadlineError=deadlineValidation(d.deadline,byId(ui.edit)?.createdDate||today(),byId(ui.edit)?.deadline);

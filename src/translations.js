@@ -1,4 +1,13 @@
 export default {
+  "그 외": "Other",
+  "장르 직접 입력": "Custom genres",
+  "여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.": "Separate genres with commas. Enter up to 5 custom genres, 24 characters each.",
+  "장르를 선택하고, 그 외를 선택했다면 장르를 직접 입력해 주세요.": "Select a genre and enter a name if you selected Other.",
+  "기본 장르와 겹치지 않는 서로 다른 장르를 최대 5개, 각 24자까지 입력해 주세요.": "Enter up to 5 unique custom genres, 24 characters each, excluding preset genres.",
+  "인원 지정": "Set capacity",
+  "인원 줄이기": "Decrease capacity",
+  "인원 늘리기": "Increase capacity",
+
   "게임 삭제": "Delete game",
   "삭제 다시 시도": "Retry deletion",
   "+ 선택지 추가": "+ Add option",
