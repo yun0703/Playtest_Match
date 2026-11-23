@@ -16,8 +16,7 @@
 .logo i::before {content:"";position:absolute;top:0;left:0;width:12px;height:12px;border-radius:3.5px;background:#ffba12;box-shadow:14px 0 #ffc938,0 14px #ffcc46,14px 14px #ffb616}
 .menu a[aria-current=page] {box-shadow:inset 0 -3px #ffbc17}
 .btn,.chip,.badge,.header-login .account-menu>summary,.header-login-link,.side-link,.search-form input {border-radius:30px}
-.header-heart,.row-title,.feature-links button {border:0;background:transparent;color:var(--ink);cursor:pointer}
-.header-heart {font:28px/1 sans-serif;padding:5px}
+.row-title,.feature-links button {border:0;background:transparent;color:var(--ink);cursor:pointer}
 .store-layout {grid-template-columns:clamp(160px,14vw,220px) minmax(0,1fr);gap:clamp(20px,3vw,52px)}
 .store-sidebar {border-right:1px solid var(--line);padding:8px 18px 20px 0}
 .store-sidebar h2 {font-size:19px}
@@ -71,11 +70,9 @@
  .store-layout {grid-template-columns:minmax(0,1fr);gap:18px}
  .store-sidebar {padding:0 0 10px;border:0;border-bottom:1px solid var(--line)}
  .side-link {min-height:32px;margin:0}
- .header-heart {margin-left:auto}
- .site>#notification-area {margin-left:0}
+ .site>#notification-area {margin-left:auto}
 }
 @media(max-width:600px) {
- .header-heart {font-size:23px;padding:2px}
  .site {gap:6px}
  .spotlight {grid-template-columns:minmax(0,1fr);gap:16px;padding:8px 0}
  .spotlight .island-art,.hero-artwork {max-height:175px}
@@ -98,3 +95,22 @@
 .managed-art {max-width:330px}
 .managed-game .managed-art {width:100%}
 .empty p .btn {margin-top:16px}
+
+
+.signup-logo-mark {display:inline-flex;margin-bottom:20px}
+.signup-logo-mark i {transform:scale(1.3);transform-origin:left center}
+.choice-editor {display:grid;gap:10px}
+.choice-editor>div {display:flex;gap:10px;align-items:end}
+.choice-editor label {display:grid;gap:4px;flex:1;min-width:0}
+.choice-editor>.btn {justify-self:start}
+.managed-entry {border-bottom:1px solid var(--line)}
+.managed-entry>summary {display:grid;grid-template-columns:clamp(70px,15vw,150px) minmax(0,1fr) auto auto;align-items:center;gap:clamp(8px,2vw,24px);padding:14px 0;cursor:pointer;list-style:none}
+.managed-entry>summary::-webkit-details-marker {display:none}
+.managed-entry>summary strong {font-size:clamp(15px,2vw,22px);overflow-wrap:anywhere}
+.managed-entry>summary:hover strong {text-decoration:underline}
+.managed-entry[open] .game-disclosure {transform:rotate(180deg)}
+.managed-entry .managed-game {border:0;border-top:1px solid var(--line)}
+.managed-thumb {border-radius:10px;overflow:hidden}
+.managed-thumb .art-caption {display:none}
+.recruitment-control {border-color:var(--ink-2)!important}
+.game-delete-actions {margin-top:18px}

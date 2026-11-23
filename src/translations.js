@@ -1,4 +1,11 @@
 export default {
+  "게임 삭제": "Delete game",
+  "삭제 다시 시도": "Retry deletion",
+  "+ 선택지 추가": "+ Add option",
+  "내가 등록한 게임에는 테스터로 참여할 수 없습니다.": "You cannot join your own game as a tester.",
+  "게임 삭제를 완료하려면 다시 시도해 주세요.": "Retry to finish deleting the game.",
+  "게임을 삭제했습니다.": "Game deleted.",
+
   "개발자의 질문": "Developer’s question",
   "모집 중인 테스트": "Open playtests",
   "현재 모집 중인 테스트가 없습니다.": "No playtests are recruiting yet.",
@@ -355,7 +362,7 @@ export default {
   "이용 동의 완료": "Participation agreement accepted",
   "함께 플레이하고, 더 나은 게임으로.": "Play together. Make better games.",
   "예시 데이터로 되돌리기": "Reset demo data",
-  "프로토타입입니다. 예시 데이터이며 이 브라우저에만 저장됩니다. 한 사람이 모든 메뉴를 체험할 수 있도록 내 테스트에도 신청할 수 있습니다. 초대 전용 예시는 Hollow Harbor이며 초대 코드는 HARBOR입니다.": "Local prototype with demo data stored in this browser only. You can try every role and join your own playtests. The invitation code for Hollow Harbor is HARBOR.",
+  "프로토타입입니다. 예시 데이터이며 이 브라우저에만 저장됩니다. 초대 전용 예시는 Hollow Harbor이며 초대 코드는 HARBOR입니다.": "Local prototype with demo data stored in this browser only. The invitation code for Hollow Harbor is HARBOR.",
   "기타 사유는 5자 이상 적어 주세요.": "Please enter at least 5 characters for Other.",
   "모집이 종료되었습니다.": "Recruitment has closed.",
   "초대 코드가 올바르지 않습니다.": "The invitation code is incorrect.",

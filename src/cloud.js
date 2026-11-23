@@ -33,6 +33,17 @@ export async function createCloud(env){
   },
   async command(action,payload){if(!user)throw new Error('로그인이 필요합니다.');const identity=user.id;const result=checked(await client.rpc('pt_command',{action,payload}));if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);},
   requireUser(){if(user)return true;const details=document.querySelector('#login-area .account-menu');if(details){details.open=true;document.getElementById('account-email')?.focus();}return false;},
+  async deleteGame(testId){
+   const identity=user?.id;
+   if(!identity)throw new Error('로그인이 필요합니다.');
+   const files=checked(await client.rpc('pt_begin_game_delete',{test_id:testId}));
+   for(let i=0;i<files.length;i+=100){
+    if(user?.id!==identity)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');
+    await api.removeMedia(files.slice(i,i+100));
+   }
+   if(user?.id!==identity)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');
+   return api.command('delete_game',{testId});
+  },
   pathFor(id,scope='game'){if(id.includes('/'))return id;if(!user)throw new Error('로그인이 필요합니다.');return `${scope}/${user.id}/${id}`;},
   async saveMedia(items){const uploaded=[];try{for(const item of items){const path=api.pathFor(item.id,item.scope);checked(await client.storage.from('playtest-media').upload(path,item.file,{contentType:item.type,upsert:false}));uploaded.push(path);}}catch(error){if(uploaded.length)await client.storage.from('playtest-media').remove(uploaded);throw error;}},
   async removeMedia(ids){if(ids.length)checked(await client.storage.from('playtest-media').remove(ids.map(id=>api.pathFor(id))));},

@@ -10,11 +10,14 @@ const dispose=initialize();
 for(const page of ['home','tester','developer','admin']){location.hash='#'+page;handlers.hashchange();if(!elements.get('#main').innerHTML.length)throw Error('Empty '+page);console.log('PASS render '+page);}
 location.hash='#home';handlers.hashchange();
 const html=elements.get('#main').innerHTML;
-const id=html.match(/data-act="open" data-id="([^"]+)"/)[1];
+const id=[...html.matchAll(/data-act="open" data-id="([^"]+)"/g)].map(match=>match[1]).find(id=>id==="t3");
 const button={dataset:{act:'open',id},disabled:false};
 handlers.click({target:{closest:s=>s==='[data-act]'?button:null}});
 if(!elements.get('#main').innerHTML.includes('data-form="apply"'))throw Error('Detail missing application');
-console.log('PASS featured detail and application form');
+const ownButton={dataset:{act:'open',id:'t1'},disabled:false};
+handlers.click({target:{closest:s=>s==='[data-act]'?ownButton:null}});
+if(elements.get('#main').innerHTML.includes('data-form="apply"'))throw Error('Owner can apply to their own test');
+console.log('PASS application for other games and owner exclusion');
 dispose();
 
 let refreshAccount;
@@ -27,7 +30,7 @@ cloud.user=null;
 await refreshAccount(true);
 if(location.hash!=='#home')throw Error('Signed-out route disagrees with the screen');
 if(elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Developer form survived sign-out');
-if(!elements.get('#main').innerHTML.includes('인디게임 플레이테스트'))throw Error('Signed-out page did not render');
+if(!elements.get('#main').innerHTML.includes('<h1>PlayTest Match</h1>'))throw Error('Signed-out page did not render');
 disposeCloud();
 console.log('PASS signed-in member publishing and account reset with empty private state');
 

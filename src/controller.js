@@ -204,7 +204,7 @@ function renderHome(){
  const featured=tests.find(t=>t.id===ui.featured)||tests[0];
  const list=filteredTests(tests);
  const side=`<h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임</button><button class="side-link" data-act="show-favorites">찜한 게임</button><h3>장르</h3>${homeGenresHtml(tests)}`;
- const hero=featured?`<div><p class="genre-label">${esc(featured.genre)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>인디게임 플레이테스트</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
+ const hero=featured?`<div><p class="genre-label">${esc(featured.genre)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>PlayTest Match</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
  const picks=tests.length>1?`<div class="feature-links">${tests.slice(0,4).map(t=>`<button data-act="feature" data-id="${t.id}" aria-pressed="${featured.id===t.id}" data-no-translate>${esc(t.title)}</button>`).join('')}</div>`:'';
  return workspace(side,`<section class="spotlight" aria-label="인디게임 플레이테스트">${hero}</section>${picks}<section class="recruit-section"><div class="section-heading"><h2>모집 중인 테스트</h2><button class="text-link" data-act="clear-filters">필터 초기화</button></div>${catalogTools()}${list.length?list.map(catalogRow).join(''):`<div class="empty">${tests.length?'검색 조건에 맞는 테스트가 없습니다.':'현재 모집 중인 테스트가 없습니다.'}</div>`}</section>`);
 }
@@ -219,7 +219,7 @@ function cancellationHtml(t,application){if(!application||!['waiting','applied']
 function renderTester(){
   if(ui.detail){const d=byId(ui.detail);if(d&&visibleTo(d))return renderDetail(d)}
   const open=S.tests.filter(t=>recruitmentOpen(t));
-  const mineList=S.tests.filter(t=>S.mine[t.id]),favorites=S.tests.filter(t=>S.favorites.includes(t.id)&&['open','closed'].includes(t.status));
+  const mineList=S.tests.filter(t=>t.owner!=='me'&&S.mine[t.id]),favorites=S.tests.filter(t=>S.favorites.includes(t.id)&&['open','closed'].includes(t.status));
   const genres=['전체',...GENRES.filter(g=>open.some(t=>t.genre===g))];
   const list=ui.tTab==='mine'?mineList:filteredTests(ui.tTab==='saved'?favorites:open);
   const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중']])+'<button class="side-link" data-act="tester-alerts">알림</button>';
@@ -249,7 +249,7 @@ function reportPanel(t){
       <div class="actions"><button class="btn" type="submit">신고 접수</button><button class="btn ghost" type="button" data-act="report-cancel">취소</button></div></form></div>`;
 }
 function renderDetail(t){
-  const m=S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',own=t.owner==='me',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=capacityFull(t),url=safeUrl(t.link);
+  const own=t.owner==='me',m=own?null:S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=capacityFull(t),url=safeUrl(t.link);
   const guarded=access
     ?`<div><h3>플레이 방법</h3><p style="margin-top:6px">${esc(t.how)}</p></div>
       <div><h3>이 설문에 답해 주세요</h3><ol class="qs" style="margin-top:6px">${t.survey.map(q=>`<li>${esc(q.label)} <span class="mono muted">${QTYPE[q.type]}</span></li>`).join('')}</ol></div>`
@@ -259,7 +259,8 @@ function renderDetail(t){
     <dl class="facts"><dt>BUILD</dt><dd class="mono">${esc(t.build)}</dd><dt>PLATFORM</dt><dd>${esc(t.platform)}</dd><dt>GENRE</dt><dd>${esc(t.genre)}</dd><dt>TIME</dt><dd>약 ${t.minutes}분</dd><dt>SLOTS</dt><dd>${slotsHtml(t)}</dd><dt>ACCESS</dt><dd>${VIS[t.vis]} · ${VIS_DESC[t.vis]}</dd></dl>
     ${deadlineHtml(t)}${guarded}</div>`;
   let side;
-  if(!m){
+  if(own)side='<div class="notice">내가 등록한 게임에는 테스터로 참여할 수 없습니다.</div>';
+  else if(!m){
     const btn=t.vis==='approval'?'동의하고 승인 요청':'동의하고 신청';
     side=`<div class="panel"><h3>참여하기</h3>
       <form data-form="apply" data-id="${t.id}" novalidate>
@@ -307,7 +308,7 @@ function summaryHtml(t){
   }).join('')}</div>${linked.length?`<details class="res"><summary>설문에 연결된 버그 <span>${linked.length}</span></summary>${bugListHtml(t,linked,{ownOnly:false})}</details>`:''}`;
 }
 function reqsHtml(t){
-  const r=t.requests||[];
+  const r=(t.requests||[]).filter(request=>request.id!=='me'&&request.id!==cloud?.user?.id);
   if(!r.length)return '';
   const w=r.filter(x=>x.status==='waiting').length;
   return `<details class="res" ${w?'open':''}><summary>신청자 관리 (${r.length}${w?` · 대기 ${w}`:''})</summary><ul class="reqs">${r.map(x=>`<li><span>${esc(x.name)} ${x.agreed?'<span class="ck">동의 완료</span>':''}</span>${x.status==='waiting'
@@ -322,7 +323,7 @@ function surveyBuilderHtml(){
       <label class="check small"><input type="checkbox" class="q-req" ${q.required?'checked':''}>필수</label>
       <span class="actions"><button class="btn ghost sm" type="button" data-act="q-up" data-i="${i}" ${i===0?'disabled':''} aria-label="질문 ${i+1} 위로">위로</button><button class="btn ghost sm" type="button" data-act="q-down" data-i="${i}" ${i===d.length-1?'disabled':''} aria-label="질문 ${i+1} 아래로">아래로</button><button class="btn danger sm" type="button" data-act="q-del" data-i="${i}" aria-label="질문 ${i+1} 삭제">삭제</button></span></div>
     <input type="text" class="q-label" maxlength="80" value="${esc(q.label)}" placeholder="질문을 입력하세요" aria-label="질문 ${i+1} 내용">
-    ${q.type==='choice'?`<textarea class="q-opts" placeholder="보기를 한 줄에 하나씩 적어 주세요 (2~6개)" aria-label="질문 ${i+1} 보기">${esc(q.options.join('\n'))}</textarea>`:''}
+    ${q.type==='choice'?`<div class="choice-editor">${q.options.map((option,j)=>`<div><label>선택지 ${j+1}<input type="text" class="q-option" value="${esc(option)}"></label><button class="btn ghost sm" type="button" data-act="option-remove" data-i="${i}" data-option="${j}" ${q.options.length<=2?'disabled':''}>삭제</button></div>`).join('')}<button class="btn ghost sm" type="button" data-act="option-add" data-i="${i}" ${q.options.length>=6?'disabled':''}>+ 선택지 추가</button></div>`:''}
     ${q.type==='scale'?'<p class="hint">테스터가 1점(별로예요)부터 5점(아주 좋아요)까지 고릅니다. 결과는 평균과 분포로 보입니다.</p>':''}
     ${q.type==='text'?'<p class="hint">테스터가 자유롭게 적습니다. 결과는 응답 목록으로 보입니다.</p>':''}
   </div>`).join('')}</div>
@@ -337,8 +338,8 @@ function syncDraft(){
     q.label=r.querySelector('.q-label').value;
     q.type=r.querySelector('.q-type').value;
     q.required=r.querySelector('.q-req').checked;
-    const o=r.querySelector('.q-opts');
-    if(o)q.options=o.value.split('\n');
+    const options=[...r.querySelectorAll('.q-option')];
+    if(options.length)q.options=options.map(input=>input.value);
     else if(q.type==='choice'&&!q.options.length)q.options=['',''];
     if(q.type!=='choice')q.options=[];
   });
@@ -390,13 +391,15 @@ function devForm(){
       <div class="actions"><button class="btn" type="submit">${hid?'수정하고 재공개 요청':e?'수정 저장':'등록하고 바로 공개'}</button>${e?'<button class="btn ghost" type="button" data-act="cancel-edit">수정 취소</button>':''}</div></form></div>`;
 }
 function myTestCard(t){
+  const remove=`<button class="btn danger" type="button" data-act="delete-game" data-id="${t.id}">${t.deleting?'삭제 다시 시도':'게임 삭제'}</button>`;
+  if(t.deleting)return `<article class="panel"><h2 data-no-translate>${esc(t.title)}</h2><p>게임 삭제를 완료하려면 다시 시도해 주세요.</p>${remove}</article>`;
   let body='';
   if(t.status==='hidden')body=`<p class="reason">운영자가 숨김 처리했습니다. ${esc(t.reason||'')}</p><div class="actions"><button class="btn sm" type="button" data-act="edit" data-id="${t.id}">수정하고 재공개 요청</button></div>`;
   else if(t.status==='appeal')body=`<p class="reason warn">재공개 요청을 운영자가 검토하고 있습니다.</p>`;
-  else body=`${slotsHtml(t)}<div class="actions"><button class="btn ghost sm" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost sm" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${versionFilterHtml(t,'survey')}<div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
+  else body=`${slotsHtml(t)}<div class="actions"><button class="btn" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost recruitment-control" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${versionFilterHtml(t,'survey')}<div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
   const rc=S.reports.filter(r=>r.testId===t.id&&r.status==='open').length;
-  return `<article class="card managed-game"><div class="managed-art">${gameArt(t)}</div><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
-    <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${esc(t.genre)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="managed-deadline">${deadlineHtml(t)}</div></div><div class="foot manage-controls">${body}</div></article>`;
+  return `<details class="managed-entry" data-game="${t.id}"><summary><div class="managed-thumb">${gameArt(t)}</div><strong data-no-translate>${esc(t.title)}</strong>${tBadge(t.status)}<span class="game-disclosure" aria-hidden="true">⌄</span></summary><article class="card managed-game"><div class="managed-art">${gameArt(t)}</div><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
+    <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${esc(t.genre)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="managed-deadline">${deadlineHtml(t)}</div></div><div class="foot manage-controls">${body}<div class="actions game-delete-actions">${remove}</div></div></article></details>`;
 }
 function renderDeveloper(){
   const mine=S.tests.filter(t=>t.owner==='me');
@@ -468,6 +471,7 @@ function render(capture=true){
   const p=ui.page;
   $('#main').dataset.page=p;
   $('#main').innerHTML=p==='home'?renderHome():p==='tester'?renderTester():p==='developer'?renderDeveloper():(!cloud||cloud.canAdmin)?renderAdmin():'<p class="notice">운영자 권한이 필요합니다.</p>';
+  for(const node of document.querySelectorAll?.('.managed-entry')||[]){if(expanded.includes(node.dataset.game))node.open=true;}
   restoreDevFields();
   restoreFeedbackDraft();
   mediaHydrator.hydrate($('#main'));
@@ -525,6 +529,7 @@ listen(document,'click',async e=>{
     }
     ui.detail=id;render();top();return;
   }
+  if(a==='start-play'&&byId(id)?.owner==='me')return;
   if(cloud&&await handleCloudClick(a,b,e))return;
   if(a==='show-favorites'){if(cloud&&!cloud.requireUser())return;return nav('tester','saved');}
   if(a==='favorite'){if(cloud&&!cloud.requireUser())return;const saved=!S.favorites.includes(id);if(cloud){if(!await remoteCommand('favorite',{testId:id,saved}))return;}else{const previous=[...S.favorites];S.favorites=saved?[...S.favorites,id]:S.favorites.filter(value=>value!==id);if(!save()){S.favorites=previous;return;}}if(ui.detail&&byId(id)){document.querySelectorAll('[data-act="favorite"]').forEach(node=>{if(node.dataset.id===id)node.outerHTML=favoriteButton(byId(id));});}else render();return toast(saved?'게임을 찜했습니다.':'찜을 해제했습니다.');}
@@ -576,6 +581,32 @@ listen(document,'click',async e=>{
   }
   if(a==='restore'){const t=byId(id);t.status='open';delete t.reason;logAdd(t,'재공개','수정 내용 확인');save();render();return toast(`'${t.title}'을 다시 공개했습니다.`)}
   /* developer */
+  if(a==='delete-game'){
+    const t=byId(id);
+    if(t?.owner!=='me'||!window.confirm(`‘${t.title}’ 게임을 영구 삭제할까요?
+게임 정보, 신청 기록, 설문 응답, 버그 제보, 첨부파일과 찜 기록이 삭제되며 복구할 수 없습니다.`))return;
+    ui.saving=true;
+    try{
+      if(cloud){
+        S=migrateFeatures(await cloud.deleteGame(id));
+      }else{
+        const previous=clone(S);
+        const files=[...t.media,...S.bugs.filter(bug=>bug.testId===id).flatMap(bug=>bug.attachments||[])];
+        S.tests=S.tests.filter(test=>test.id!==id);
+        for(const key of ['reports','bugs','notifications'])S[key]=S[key].filter(item=>item.testId!==id);
+        S.favorites=S.favorites.filter(testId=>testId!==id);
+        delete S.mine[id];delete S.myReports[id];
+        if(!save()){S=previous;return;}
+        await removeMedia(files.map(file=>file.id));
+      }
+      await clearPublishedDraft(id);
+      render(false);toast('게임을 삭제했습니다.');
+    }catch(error){
+      if(cloud){try{S=migrateFeatures(await cloud.snapshot());render(false);}catch{}}
+      toast(error.message);
+    }finally{ui.saving=false;}
+    return;
+  }
   if(a==='toggle-close'){const t=byId(id);t.status=t.status==='open'?'closed':'open';save();render();return toast(t.status==='open'?'모집을 재개했습니다.':'모집을 종료했습니다.')}
   if(a==='req-approve'||a==='req-decline'){
     const t=byId(id),r=(t.requests||[]).find(x=>x.id===b.dataset.req);if(!r)return;
@@ -589,6 +620,15 @@ listen(document,'click',async e=>{
     r.status='declined';
     if(r.id==='me'&&S.mine[t.id])S.mine[t.id].status='declined';
     save();render();return toast(`${r.name}님의 신청을 거절했습니다.`);
+  }
+  if(a==='option-add'||a==='option-remove'){
+    syncDraft();
+    const options=ui.draft[+b.dataset.i].options;
+    if(a==='option-add'&&options.length<6)options.push('');
+    if(a==='option-remove'&&options.length>2)options.splice(+b.dataset.option,1);
+    renderSurvey();
+    if(a==='option-add')document.querySelectorAll(`.qrow[data-i="${b.dataset.i}"] .q-option`)[options.length-1]?.focus();
+    return;
   }
   if(a==='q-add'){syncDraft();if(ui.draft.length<MAXQ)ui.draft.push(newQ('text'));return renderSurvey()}
   if(a==='q-del'){syncDraft();ui.draft.splice(+b.dataset.i,1);return renderSurvey()}
@@ -645,6 +685,7 @@ listen(document,'submit',async e=>{
     return toast('신고를 접수했습니다. 운영자가 확인합니다.');
   }
   if(ui.saving)return;
+  if(['apply','feedback','bug'].includes(f.dataset.form)&&byId(f.dataset.id)?.owner==='me')return;
   if(f.dataset.form==='apply'){
     if(cloud){if(await remoteCommand('apply',{testId:f.dataset.id,agreed:$('#ap-agree').checked,code:$('#ap-code')?.value.trim().toUpperCase()||''})){render();toast('신청을 저장했습니다.');}return;}
     const t=byId(f.dataset.id),err=$('#ap-err');
