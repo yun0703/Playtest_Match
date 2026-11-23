@@ -1,4 +1,5 @@
 export default {
+  "사용자 이름이나 비밀번호가 없는 유효한 HTTPS 빌드 링크를 입력해 주세요.": "Enter a valid HTTPS build link without a username or password.",
   "선택 완료": "Done",
   "장르 선택": "Select genres",
   "그 외": "Other",

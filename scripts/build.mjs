@@ -7,6 +7,14 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const dist=path.join(root,'dist');
 const env=loadEnv('production',root,'VITE_');
 if(process.env.VERCEL&&(!env.VITE_SUPABASE_URL||!env.VITE_SUPABASE_PUBLISHABLE_KEY))throw new Error('Vercel requires Supabase public environment variables.');
+// Validate before bundling so an accidentally configured privileged key
+// cannot become part of the public JavaScript bundle.
+const publicKey=env.VITE_SUPABASE_PUBLISHABLE_KEY;
+if(publicKey&&!/^sb_publishable_[A-Za-z0-9_-]+$/.test(publicKey)){
+ let role;
+ try{role=JSON.parse(Buffer.from(publicKey.split('.')[1],'base64url')).role;}catch{}
+ if(role!=='anon')throw new Error('The browser build requires a Supabase publishable or legacy anon key.');
+}
 await mkdir(dist,{recursive:true});
 const result=await build({
  define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(env.VITE_SUPABASE_URL||''),'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY':JSON.stringify(env.VITE_SUPABASE_PUBLISHABLE_KEY||'')},

@@ -121,7 +121,13 @@ let mediaHydrator=createMediaHydrator();
 const ui={resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const safeUrl=u=>/^https?:\/\//i.test(u||'')?u:'';
+function safeUrl(value){
+  if(typeof value!=='string'||value.length>2048||!/^https:\/\//i.test(value)||/[\s\\\x00-\x1f\x7f]/.test(value))return '';
+  try{
+    const url=new URL(value);
+    return url.hostname&&!url.username&&!url.password?url.href:'';
+  }catch{return '';}
+}
 const byId=id=>S.tests.find(t=>t.id===id);
 const today=()=>seoulDate();
 const allNotifications=()=>[...deadlineNotifications(S),...S.notifications].slice(0,100);
@@ -313,7 +319,7 @@ function renderDetail(t){
   }else if(st==='declined'){
     side=`<div class="panel"><h3>이번 테스트에는 참여할 수 없습니다</h3><p class="muted">개발자가 신청을 받지 않았습니다. 다른 테스트를 둘러보세요.</p></div>`;
   }else if(st==='applied'){
-    side=`<div class="panel"><h3>빌드 열기</h3>${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.platform)} 빌드 받기</a>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
+    side=`<div class="panel"><h3>빌드 열기</h3>${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(t.platform)} 빌드 받기</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
       <p class="mono muted">이용 동의 ${esc(m.agreedAt||'')} · 공유와 재배포는 금지됩니다.</p>
       <form data-form="feedback" data-id="${t.id}" novalidate>
         <p class="hint">* 표시는 필수 문항입니다.</p>
@@ -851,7 +857,8 @@ listen(document,'submit',async e=>{
     if(!d.title||!d.team){err.textContent='게임 이름과 팀 이름을 입력해 주세요.';return}
     if(d.teaser.length<8){err.textContent='공개 소개를 8자 이상 적어 주세요.';return}
     if(d.vis==='invite'){if(!/^[A-Z0-9]{4,12}$/.test(d.code)){err.textContent='초대 코드는 영문과 숫자 4~12자로 입력해 주세요.';return}}else{d.code=''}
-    if(!safeUrl(d.link)){err.textContent='빌드 링크는 https:// 로 시작해야 합니다.';return}
+    d.link=safeUrl(d.link);
+    if(!d.link){err.textContent='사용자 이름이나 비밀번호가 없는 유효한 HTTPS 빌드 링크를 입력해 주세요.';return}
     if(d.how.length<10){err.textContent='플레이 방법을 10자 이상 적어 주세요.';return}
     if(!Number.isInteger(d.minutes)||d.minutes<5||d.minutes>120){err.textContent='소요 시간과 모집 인원을 확인해 주세요.';return}
     const capacityError=capacityValidation(d.slots,d.deadline,byId(ui.edit)?.applicants||0);
