@@ -116,9 +116,9 @@
 .game-delete-actions {margin-top:18px}
 
 
-.genre-options,.capacity-modes {display:flex;flex-wrap:wrap;gap:8px}
-.genre-options .check,.capacity-modes .check {padding:5px 10px;border:1px solid var(--line);border-radius:30px}
-.genre-options .check:has(input:checked),.capacity-modes .check:has(input:checked) {background:var(--accent-soft)}
+.capacity-modes {display:flex;flex-wrap:wrap;gap:8px}
+.capacity-modes .check {padding:5px 10px;border:1px solid var(--line);border-radius:30px}
+.capacity-modes .check:has(input:checked) {background:var(--accent-soft)}
 .capacity-stepper {display:grid;grid-template-columns:44px minmax(65px,100px) 44px;gap:8px;align-items:center}
 .capacity-stepper button {font-size:20px;padding:0}
 .capacity-stepper input {text-align:center}
@@ -129,3 +129,16 @@
 .notification-page li small,.notification-page li button>span {font-size:13px}
 
 fieldset.field {min-width:0}
+
+.genre-picker {border:1px solid var(--line);border-radius:12px;background:var(--input)}
+.genre-picker>summary {display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 13px;list-style:none;cursor:pointer;font-weight:650}
+.genre-picker>summary::-webkit-details-marker {display:none}
+.genre-chevron {font-size:18px;line-height:1}
+.genre-picker[open] .genre-chevron {transform:rotate(180deg)}
+.genre-options {display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:3px 8px;padding:10px;border-top:1px solid var(--line)}
+.genre-options .check {display:flex;align-items:center;padding:6px 8px;min-height:36px;border-radius:7px}
+.genre-options .check:hover {background:var(--surface-2)}
+.genre-options .check:has(input:checked),.selected-genre-tags>span {background:var(--accent-soft)}
+.selected-genre-tags {display:flex;flex-wrap:wrap;gap:6px}
+.selected-genre-tags:empty {display:none}
+.selected-genre-tags>span {border-radius:30px;padding:3px 10px;font-size:12px}

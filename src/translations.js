@@ -1,4 +1,5 @@
 export default {
+  "장르 선택": "Select genres",
   "그 외": "Other",
   "장르 직접 입력": "Custom genres",
   "여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.": "Separate genres with commas. Enter up to 5 custom genres, 24 characters each.",

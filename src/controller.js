@@ -133,6 +133,12 @@ function currentDraftOwner(){return cloud?.user?.id||(!cloud?'local':'');}
 function selectedGenres(){
   return [...document.querySelectorAll('[name="f-genres"]:checked')].map(input=>input.value);
 }
+function genreTags(genres){
+  return genres.map(genre=>`<span>${esc(genre)}</span>`).join('');
+}
+function updateGenreSummary(){
+  $('#selected-genre-tags').innerHTML=genreTags(selectedGenres());
+}
 function updateDevSelectors(){
   const unlimited=$('#f-unlimited').checked;
   $('#f-slots').disabled=unlimited;
@@ -156,6 +162,7 @@ function restoreDevFields(){
   $('#f-unlimited').checked=!!ui.devFields['f-unlimited'];
   $('#f-limited').checked=!$('#f-unlimited').checked;
   updateDevSelectors();
+  updateGenreSummary();
   $('#code-field').hidden=$('#f-vis').value!=='invite';
   $('#vis-desc').textContent=VIS_DESC[$('#f-vis').value]||'';
 }
@@ -394,7 +401,24 @@ function devForm(){
       <fieldset class="group"><legend>기본 정보</legend><div class="fields">
         <div class="field"><label for="f-title">게임 이름</label><input type="text" id="f-title" value="${v('title')}" maxlength="40"></div>
         <div class="field"><label for="f-team">팀 이름</label><input type="text" id="f-team" value="${v('team')}" maxlength="40"></div>
-        <fieldset class="field"><legend>장르</legend><div class="genre-options">${[...GENRES,OTHER_GENRE].map(genre=>`<label class="check"><input type="checkbox" name="f-genres" ${genre===OTHER_GENRE?'id="f-other"':''} value="${genre}" ${(genre===OTHER_GENRE?customGenres.length:genres.includes(genre))?'checked':''}><span>${genre}</span></label>`).join('')}</div><div class="field" id="other-genre-field" ${customGenres.length?'':'hidden'}><label for="f-other-genres">장르 직접 입력</label><input type="text" id="f-other-genres" value="${esc(customGenres.join(', '))}" aria-describedby="genre-hint" ${customGenres.length?'':'disabled'}><p id="genre-hint" class="hint">여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.</p></div></fieldset>
+        <fieldset class="field">
+          <legend>장르</legend>
+          <details class="genre-picker" id="genre-picker">
+            <summary>
+              <span>장르 선택</span>
+              <span class="genre-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="genre-options">
+              ${[...GENRES,OTHER_GENRE].map(genre=>`<label class="check"><input type="checkbox" name="f-genres" ${genre===OTHER_GENRE?'id="f-other"':''} value="${genre}" ${(genre===OTHER_GENRE?customGenres.length:genres.includes(genre))?'checked':''}><span>${genre}</span></label>`).join('')}
+            </div>
+          </details>
+          <div class="selected-genre-tags" id="selected-genre-tags" aria-live="polite">${genreTags(customGenres.length?[...genres,OTHER_GENRE]:genres)}</div>
+          <div class="field" id="other-genre-field" ${customGenres.length?'':'hidden'}>
+            <label for="f-other-genres">장르 직접 입력</label>
+            <input type="text" id="f-other-genres" value="${esc(customGenres.join(', '))}" aria-describedby="genre-hint" ${customGenres.length?'':'disabled'}>
+            <p id="genre-hint" class="hint">여러 장르는 쉼표로 구분해 주세요. 최대 5개, 각 24자까지 입력할 수 있습니다.</p>
+          </div>
+        </fieldset>
         <div class="field"><label for="f-platform">플랫폼</label><select id="f-platform">${opts(PLATFORMS,e&&e.platform)}</select></div>
         <div class="field"><label for="f-build">빌드 버전</label><input type="text" id="f-build" value="${e?esc(e.build):'v0.1.0'}" maxlength="16"></div>
         <div class="field"><label for="f-min">예상 소요 시간 (분)</label><input type="number" id="f-min" min="5" max="120" value="${e?e.minutes:20}"></div>
@@ -708,6 +732,7 @@ listen(document,'change',e=>{
     if(d)d.textContent=VIS_DESC[e.target.value]||'';
   }
   if(e.target.name==='capacity-mode'||e.target.id==='f-other')updateDevSelectors();
+  if(e.target.name==='f-genres')updateGenreSummary();
   if(e.target.classList&&e.target.classList.contains('q-type')){syncDraft();renderSurvey()}
 });
 
@@ -798,7 +823,11 @@ listen(document,'submit',async e=>{
     const genres=selection.filter(genre=>genre!==OTHER_GENRE);
     const customGenres=$('#f-other').checked?g('f-other-genres').split(',').map(value=>value.trim()).filter(Boolean):[];
     if(!genres.length&&!customGenres.length||$('#f-other').checked&&!customGenres.length){
-      err.textContent='장르를 선택하고, 그 외를 선택했다면 장르를 직접 입력해 주세요.';return;
+      $('#genre-picker').open=true;
+      err.textContent='장르를 선택하고, 그 외를 선택했다면 장르를 직접 입력해 주세요.';
+      if($('#f-other').checked)$('#f-other-genres').focus();
+      else $('#genre-picker summary').focus();
+      return;
     }
     if(customGenres.length>5||customGenres.some(genre=>[...genre].length>24||/[\x00-\x1f\x7f]/.test(genre)||GENRES.includes(genre)||genre===OTHER_GENRE)||new Set(customGenres.map(genre=>genre.toLowerCase())).size!==customGenres.length){
       err.textContent='기본 장르와 겹치지 않는 서로 다른 장르를 최대 5개, 각 24자까지 입력해 주세요.';return;
