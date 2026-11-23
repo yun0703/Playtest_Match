@@ -1,4 +1,13 @@
 export default {
+  "개발자의 질문": "Developer’s question",
+  "모집 중인 테스트": "Open playtests",
+  "현재 모집 중인 테스트가 없습니다.": "No playtests are recruiting yet.",
+  "테스터 메뉴": "Tester menu",
+  "개발자 메뉴": "Developer menu",
+  "다음 플레이테스트": "Next playtest",
+  "게임 등록": "Register game",
+  "+ 게임 등록": "+ Register game",
+
   "찜 해제": "Unsave",
   "게임 찜": "Save game",
   "찜한 게임": "Saved games",

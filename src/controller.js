@@ -118,7 +118,7 @@ function save(){if(cloud)throw new Error('서버 모드에서 로컬 변경은 �
 
 let S=migrateFeatures(cloud?initialState:load());
 let mediaHydrator=createMediaHydrator();
-const ui={resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'open',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
+const ui={resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=u=>/^https?:\/\//i.test(u||'')?u:'';
@@ -186,13 +186,27 @@ function filteredTests(list){
 }
 function catalogTools(){return `<div class="catalog-tools"><form data-form="search" class="search-form"><label class="sr-only" for="game-search">게임 검색</label><input id="game-search" type="search" name="search" value="${esc(ui.search)}" placeholder="게임, 개발팀 검색" autocomplete="off"><button type="submit" aria-label="검색">⌕</button></form><div class="catalog-selects"><label class="sr-only" for="platform-filter">플랫폼</label><select id="platform-filter"><option value="all" ${ui.platform==='all'?'selected':''}>모든 플랫폼</option>${PLATFORMS.map(p=>`<option value="${p}" ${ui.platform===p?'selected':''}>${p}</option>`).join('')}</select><label class="sr-only" for="sort-filter">정렬</label><select id="sort-filter">${[['default','등록 순'],['new','최근 등록 순'],['short','짧은 플레이 시간 순'],['seats','남은 자리 많은 순']].map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${l}</option>`).join('')}</select></div></div>`;}
 function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}<span>${tests.filter(t=>t.genre===g).length}</span></button>`;return GENRES.slice(0,8).map(button).join('')+`<details class="more-genres" ${GENRES.slice(8).includes(ui.genre)?'open':''}><summary>장르 더 보기</summary><div>${GENRES.slice(8).map(button).join('')}</div></details>`;}
+function workspace(side,body){
+ return `<div class="store-layout"><aside class="store-sidebar">${side}</aside><div class="store-content">${body}</div></div>`;
+}
+function islandArt(){return '<img class="island-art" src="/assets/playtest-island.jpg" alt="">';}
+function sectionNav(label,action,selected,items){
+ return `<h2>${label}</h2>${items.map(([key,title])=>`<button type="button" class="side-link ${key===selected?'active':''}" aria-pressed="${key===selected}" data-act="${action}" data-tab="${key}">${title}</button>`).join('')}`;
+}
+function featureQuestion(t){
+ return t.feedbackFocus?`<div class="hero-question"><b>개발자의 질문</b><p data-no-translate>${esc(t.feedbackFocus)}</p></div>`:'';
+}
+function catalogRow(t){
+ return `<article class="catalog-row"><button class="row-cover" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><button class="row-title" data-act="open" data-id="${t.id}" data-no-translate>${esc(t.title)}</button><div class="row-facts"><span>${esc(t.genre)}</span><span>${esc(t.platform)}</span><span>${t.minutes}분</span></div>${slotsHtml(t)}${deadlineHtml(t)}${favoriteButton(t)}</article>`;
+}
 function renderHome(){
  const tests=S.tests.filter(t=>recruitmentOpen(t));
  const featured=tests.find(t=>t.id===ui.featured)||tests[0];
  const list=filteredTests(tests);
- return `<div class="store-layout"><aside class="store-sidebar"><h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임 <span>${tests.length}</span></button><button class="side-link" type="button" data-act="show-favorites">찜한 게임 <span>${S.favorites.length}</span></button><h3>장르</h3>${homeGenresHtml(tests)}<div class="sidebar-note"><h3>게임을 만들고 있나요?</h3><p>첫 빌드를 공개하고<br>플레이어의 의견을 모아보세요.</p><a href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div></aside><div class="store-content"><div class="store-title"><div><span class="page-kicker">PLAYTEST MATCH</span><h1>인디게임 플레이테스트</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p></div><a class="btn" href="#developer" data-nav="developer" data-sub="new">+ 테스트 등록</a></div>
- ${featured?`<section class="featured-section" aria-labelledby="featured-title"><div class="section-heading"><h2 id="featured-title">추천 테스트</h2><span class="section-note">모집 중인 게임</span></div><div class="feature-stage"><button type="button" class="feature-image" data-act="open" data-id="${featured.id}" aria-label="${esc(featured.title)} 테스트 살펴보기">${gameArt(featured)}</button><div class="feature-info"><span class="genre-label">${esc(featured.genre)} · ${esc(featured.platform)}</span><h2 data-no-translate>${esc(featured.title)}</h2><p data-no-translate>${esc(featured.teaser)}</p>${focusHtml(featured,true)}<div class="feature-facts"><span>예상 플레이 시간</span><b>${featured.minutes}분</b><span>참여 방식</span>${visBadge(featured.vis)}</div>${slotsHtml(featured)}<button class="btn" type="button" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button></div></div><div class="feature-picker">${tests.slice(0,4).map(t=>`<button type="button" class="feature-pick ${t.id===featured.id?'selected':''}" data-act="feature" data-id="${t.id}" aria-pressed="${t.id===featured.id}">${gameArt(t)}<span>${esc(t.title)}<small>${esc(t.genre)}</small></span></button>`).join('')}</div></section>`:''}
- <section class="recruit-section"><div class="section-heading"><h2>테스터 모집 중 <span class="count">${list.length}</span></h2><button class="text-link" type="button" data-act="clear-filters">필터 초기화</button></div>${catalogTools()}${ui.genre!=='전체'?`<p class="filter-caption">${esc(ui.genre)}</p>`:''}<div class="grid home-games">${list.length?list.map(gameCard).join(''):'<div class="empty">검색 조건에 맞는 테스트가 없습니다.</div>'}</div></section><div class="developer-strip"><div><h2>다음 빌드에 필요한 피드백을 모으세요.</h2><p>모집부터 설문 결과 확인까지 한 곳에서.</p></div><a class="btn ghost" href="#developer" data-nav="developer" data-sub="new">개발자 공간 →</a></div></div></div>`;
+ const side=`<h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임</button><button class="side-link" data-act="show-favorites">찜한 게임</button><h3>장르</h3>${homeGenresHtml(tests)}`;
+ const hero=featured?`<div><p class="genre-label">${esc(featured.genre)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>인디게임 플레이테스트</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
+ const picks=tests.length>1?`<div class="feature-links">${tests.slice(0,4).map(t=>`<button data-act="feature" data-id="${t.id}" aria-pressed="${featured.id===t.id}" data-no-translate>${esc(t.title)}</button>`).join('')}</div>`:'';
+ return workspace(side,`<section class="spotlight" aria-label="인디게임 플레이테스트">${hero}</section>${picks}<section class="recruit-section"><div class="section-heading"><h2>모집 중인 테스트</h2><button class="text-link" data-act="clear-filters">필터 초기화</button></div>${catalogTools()}${list.length?list.map(catalogRow).join(''):`<div class="empty">${tests.length?'검색 조건에 맞는 테스트가 없습니다.':'현재 모집 중인 테스트가 없습니다.'}</div>`}</section>`);
 }
 
 /* ---------- tester ---------- */
@@ -207,14 +221,15 @@ function renderTester(){
   const open=S.tests.filter(t=>recruitmentOpen(t));
   const mineList=S.tests.filter(t=>S.mine[t.id]),favorites=S.tests.filter(t=>S.favorites.includes(t.id)&&['open','closed'].includes(t.status));
   const genres=['전체',...GENRES.filter(g=>open.some(t=>t.genre===g))];
-  const list=filteredTests(ui.tTab==='mine'?mineList:ui.tTab==='saved'?favorites:open);
-  const tabs=`<div class="tabs" role="tablist">
-    <button role="tab" type="button" data-act="tab-t" data-tab="open" aria-selected="${ui.tTab==='open'}">모집 중 ${open.length}</button>
-    <button role="tab" type="button" data-act="tab-t" data-tab="mine" aria-selected="${ui.tTab==='mine'}">내 참여 ${mineList.length}</button><button role="tab" type="button" data-act="tab-t" data-tab="saved" aria-selected="${ui.tTab==='saved'}">찜한 게임 ${S.favorites.length}</button></div>`;
+  const list=ui.tTab==='mine'?mineList:filteredTests(ui.tTab==='saved'?favorites:open);
+  const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중']])+'<button class="side-link" data-act="tester-alerts">알림</button>';
   const chips=ui.tTab==='open'?`<div class="sub" aria-label="장르 필터">${genres.map(g=>`<button type="button" class="chip" data-act="genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}</button>`).join('')}</div>`:'';
-  const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
+  const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="participant-art">${gameArt(t)}</div><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
   const empty=ui.tTab==='saved'?'찜한 게임이 없습니다. 게임 카드의 하트를 눌러 모아보세요.':ui.tTab==='mine'?'아직 신청한 테스트가 없습니다. 모집 중 탭에서 플레이해 보고 싶은 게임을 골라 보세요.':'조건에 맞는 테스트가 없습니다.';
-  return `<div class="browse-heading"><h1>게임 둘러보기</h1><p class="muted">새로운 세계를 만나고, 당신의 의견을 남겨보세요.</p></div>${tabs}${chips}${catalogTools()}${ui.tTab==='saved'&&S.favorites.some(id=>!favorites.some(t=>t.id===id))?`<section class="notice"><p>지금 볼 수 없는 찜 게임이 있습니다.</p>${S.favorites.filter(id=>!favorites.some(t=>t.id===id)).map(id=>`<button type="button" class="text-link" data-act="favorite" data-id="${esc(id)}">찜 해제</button>`).join('')}</section>`:''}${list.length?`<div class="grid">${cards}</div>`:`<div class="empty">${empty}</div>`}`;
+  const next=mineList.filter(t=>visibleTo(t)&&S.mine[t.id].status==='applied').sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''))[0];
+  const hero=ui.tTab==='mine'&&next?`<section class="spotlight"><div><b>다음 플레이테스트</b><h2 data-no-translate>${esc(next.title)}</h2>${featureQuestion(next)}<div class="actions"><button class="btn" data-act="play-next" data-id="${next.id}">${S.mine[next.id].startedAt?'참여 화면 열기 →':'플레이 시작'}</button>${deadlineHtml(next)}</div></div><div class="hero-artwork">${gameArt(next)}</div></section>`:'';
+  const title=ui.tTab==='mine'?'내 참여 현황':ui.tTab==='saved'?'찜한 게임':'게임 둘러보기';
+  return workspace(side,`<h1>${title}</h1>${hero}${chips}${ui.tTab==='mine'?'':catalogTools()}${ui.tTab==='saved'&&S.favorites.some(id=>!favorites.some(t=>t.id===id))?`<section class="notice"><p>지금 볼 수 없는 찜 게임이 있습니다.</p>${S.favorites.filter(id=>!favorites.some(t=>t.id===id)).map(id=>`<button type="button" class="text-link" data-act="favorite" data-id="${esc(id)}">찜 해제</button>`).join('')}</section>`:''}${list.length?`<div class="grid">${cards}</div>` :`<div class="empty">${empty}${ui.tTab==='mine'?'<p><button class="btn" data-act="tab-t" data-tab="open">게임 둘러보기</button></p>':''}</div>`}`);
 }
 function questionHtml(q){
   const star=q.required?' *':'';
@@ -380,23 +395,22 @@ function myTestCard(t){
   else if(t.status==='appeal')body=`<p class="reason warn">재공개 요청을 운영자가 검토하고 있습니다.</p>`;
   else body=`${slotsHtml(t)}<div class="actions"><button class="btn ghost sm" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost sm" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${versionFilterHtml(t,'survey')}<div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
   const rc=S.reports.filter(r=>r.testId===t.id&&r.status==='open').length;
-  return `<article class="card"><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
-    <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${esc(t.genre)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="foot">${deadlineHtml(t)}${body}</div></div></article>`;
+  return `<article class="card managed-game"><div class="managed-art">${gameArt(t)}</div><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
+    <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${esc(t.genre)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="managed-deadline">${deadlineHtml(t)}</div></div><div class="foot manage-controls">${body}</div></article>`;
 }
 function renderDeveloper(){
-  if(cloud&&!cloud.user)return '<section class="panel"><h2>개발자</h2><p>로그인하면 테스트를 등록하고 신청자와 피드백을 관리할 수 있습니다.</p><button type="button" class="btn" data-act="account-login">로그인</button></section>';
   const mine=S.tests.filter(t=>t.owner==='me');
-  const tabs=`<div class="tabs" role="tablist">
-    <button role="tab" type="button" data-act="tab-d" data-tab="mine" aria-selected="${ui.dTab==='mine'}">내 테스트 ${mine.length}</button>
-    <button role="tab" type="button" data-act="tab-d" data-tab="new" aria-selected="${ui.dTab==='new'}">${ui.edit?'테스트 수정':'새 테스트 등록'}</button></div>`;
+  const items=[['mine','내 게임 관리'],['new',ui.edit?'테스트 수정':'게임 등록'],['drafts','임시 저장'],['results','설문 결과'],['bugs','버그 제보']];
+  const side=sectionNav('개발자 메뉴','tab-d',ui.dTab,items);
+  const head=`<div class="dashboard-heading"><h1>${items.find(([key])=>key===ui.dTab)?.[1]||'내 게임 관리'}</h1>${ui.dTab==='mine'&&(!cloud||cloud.user)?'<button class="btn" data-act="tab-d" data-tab="new">+ 게임 등록</button>':''}</div>`;
+  const page=body=>workspace(side,head+body);
+  if(cloud&&!cloud.user)return page('<section class="spotlight"><div><p>로그인하면 테스트를 등록하고 신청자와 피드백을 관리할 수 있습니다.</p><button type="button" class="btn" data-act="account-login">로그인</button></div>'+islandArt()+'</section>');
   const bugCount=S.bugs.filter(b=>mine.some(t=>t.id===b.testId)).length;
-  const draftTab=`<button role="tab" type="button" data-act="tab-d" data-tab="drafts" aria-selected="${ui.dTab==='drafts'}">임시 저장 <span>${ui.savedDrafts.length}</span></button>`;
-  const bugTab=`<button role="tab" type="button" data-act="tab-d" data-tab="bugs" aria-selected="${ui.dTab==='bugs'}">버그 제보 <span>${bugCount}</span></button>`;
-  const head=`<div class="head"><h2>개발자</h2></div>${tabs.replace('</div>',draftTab+bugTab+'</div>')}`;
-  if(ui.dTab==='drafts')return head+draftsHtml();
-  if(ui.dTab==='bugs')return head+(bugCount?mine.filter(t=>S.bugs.some(b=>b.testId===t.id)).map(t=>`<section class="panel"><h2 data-no-translate>${esc(t.title)}</h2>${versionFilterHtml(t,'bugs')}<button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button>${bugListHtml(t,filterBuild(S.bugs,ui.bugBuild[t.id]||'all'),{developer:true})}</section>`).join(''):'<p class="empty">아직 버그 제보가 없습니다.</p>');
-  if(ui.dTab==='new')return head+devForm();
-  return head+(mine.length?`<div class="grid">${mine.map(myTestCard).join('')}</div>`:'<div class="empty">등록한 테스트가 없습니다. 새 테스트 등록 탭에서 첫 게임을 올려 보세요.</div>');
+  if(ui.dTab==='results')return page(mine.length?mine.map(t=>`<section class="panel"><h2 data-no-translate>${esc(t.title)}</h2>${versionFilterHtml(t,'survey')}<button class="btn ghost sm" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button>${summaryHtml(t)}</section>`).join(''):'<p class="empty">등록한 테스트가 없습니다.</p>');
+  if(ui.dTab==='drafts')return page(draftsHtml());
+  if(ui.dTab==='bugs')return page(bugCount?mine.filter(t=>S.bugs.some(b=>b.testId===t.id)).map(t=>`<section class="panel"><h2 data-no-translate>${esc(t.title)}</h2>${versionFilterHtml(t,'bugs')}<button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button>${bugListHtml(t,filterBuild(S.bugs,ui.bugBuild[t.id]||'all'),{developer:true})}</section>`).join(''):'<p class="empty">아직 버그 제보가 없습니다.</p>');
+  if(ui.dTab==='new')return page(devForm());
+  return page(mine.length?`<div class="managed-games">${mine.map(myTestCard).join('')}</div>`:'<div class="spotlight"><p>등록한 테스트가 없습니다. 새 테스트 등록 탭에서 첫 게임을 올려 보세요.</p>'+islandArt()+'</div>');
 }
 
 /* ---------- admin ---------- */
@@ -465,7 +479,7 @@ function nav(page,sub,saved=false){
   ui.gallery=null;
   ui.page=PAGES.includes(page)?page:'home';
   ui.detail=null;ui.reporting=null;ui.hiding=null;ui.edit=null;ui.draft=null;ui.devFields=null;ui.draftStatus='';
-  if(ui.page==='tester')ui.tTab=sub||'open';
+  if(ui.page==='tester')ui.tTab=sub||'mine';
   if(ui.page==='developer')ui.dTab=sub==='new'?'mine':sub||'mine';
   if(ui.page==='admin')ui.aTab=sub||'reports';
   try{if(location.hash!=='#'+ui.page)location.hash=ui.page}catch(e){}
@@ -502,6 +516,15 @@ listen(document,'click',async e=>{
   if(n){e.preventDefault();return nav(n.dataset.nav,n.dataset.sub)}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
   const a=b.dataset.act,id=b.dataset.id;
+  if(a==='tester-alerts'){if(notifications){notifications.open=true;notifications.querySelector('summary')?.focus();}return;}
+  if(a==='play-next'){
+    const application=S.mine[id];if(!application||application.status!=='applied')return;
+    if(!application.startedAt){
+      if(cloud){if(!await remoteCommand('start_play',{testId:id}))return;}
+      else{application.startedAt=new Date().toISOString();application.playedBuild=byId(id).build;save();}
+    }
+    ui.detail=id;render();top();return;
+  }
   if(cloud&&await handleCloudClick(a,b,e))return;
   if(a==='show-favorites'){if(cloud&&!cloud.requireUser())return;return nav('tester','saved');}
   if(a==='favorite'){if(cloud&&!cloud.requireUser())return;const saved=!S.favorites.includes(id);if(cloud){if(!await remoteCommand('favorite',{testId:id,saved}))return;}else{const previous=[...S.favorites];S.favorites=saved?[...S.favorites,id]:S.favorites.filter(value=>value!==id);if(!save()){S.favorites=previous;return;}}if(ui.detail&&byId(id)){document.querySelectorAll('[data-act="favorite"]').forEach(node=>{if(node.dataset.id===id)node.outerHTML=favoriteButton(byId(id));});}else render();return toast(saved?'게임을 찜했습니다.':'찜을 해제했습니다.');}
@@ -530,7 +553,7 @@ listen(document,'click',async e=>{
   if(a==='feature'){ui.featured=id;render();return;}
   if(a==='clear-filters'){ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
   if(a==='tab-t'){if(b.dataset.tab==='saved'&&cloud&&!cloud.requireUser())return;releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.tTab=b.dataset.tab;ui.detail=null;return render()}
-  if(a==='tab-d'){if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
+  if(a==='tab-d'){if(cloud&&!cloud.user){cloud.requireUser();return;}if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
   if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;return render()}
   if(a==='genre'){ui.genre=b.dataset.genre;return render()}
   if(a==='open'){releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.gallery=null;ui.page='tester';ui.detail=id;ui.reporting=null;render();return top()}
