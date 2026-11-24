@@ -156,3 +156,7 @@ fieldset.field {min-width:0}
 .genre-options .check:has(input:checked),.selected-genre-tags>span {background:var(--accent-soft)}
 .selected-genre-tags {display:flex;align-items:flex-start;gap:6px;height:33px;overflow-x:auto;scrollbar-width:thin}
 .selected-genre-tags>span {flex:none;border-radius:30px;padding:3px 10px;font-size:12px;white-space:nowrap}
+
+.managed-entry>summary>.b-pending {grid-column:3;grid-row:2}
+.managed-entry .game-disclosure {grid-column:4;grid-row:1}
+#published-notice {margin-bottom:12px}

@@ -118,7 +118,7 @@ function save(){if(cloud)throw new Error('서버 모드에서 로컬 변경은 �
 
 let S=migrateFeatures(cloud?initialState:load());
 let mediaHydrator=createMediaHydrator();
-const ui={resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
+const ui={publishedGame:null,resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function safeUrl(value){
@@ -315,22 +315,24 @@ function renderDetail(t){
         <p class="err" id="ap-err" role="alert"></p>
         <button class="btn" type="submit" ${(full||closed)?'disabled':''}>${closed?'모집 종료':full?'모집 마감':btn}</button></form></div>`;
   }else if(st==='waiting'){
-    side=`<div class="panel"><h3>개발자의 승인을 기다리고 있습니다</h3><p class="muted">승인되면 플레이 방법, 설문 문항, 빌드 링크가 열립니다.</p><p class="mono muted">이용 동의 ${esc(m.agreedAt||'')}</p></div>`;
+    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>신청이 접수되었습니다</h3><p>개발자가 승인하면 이 화면에서 빌드를 열 수 있습니다. 나중에는 테스터 메뉴의 ‘내 참여 현황’에서 이 테스트를 다시 열 수 있습니다.</p><div class="actions">${cloud?'<button class="btn ghost" type="button" data-act="refresh-flow">승인 상태 확인</button>':''}<button class="text-link" type="button" data-act="tab-t" data-tab="mine">내 참여 현황</button></div></div>`;
   }else if(st==='declined'){
     side=`<div class="panel"><h3>이번 테스트에는 참여할 수 없습니다</h3><p class="muted">개발자가 신청을 받지 않았습니다. 다른 테스트를 둘러보세요.</p></div>`;
   }else if(st==='applied'){
-    side=`<div class="panel"><h3>빌드 열기</h3>${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(t.platform)} 빌드 받기</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
+    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>1. 빌드 열기</h3>${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(t.platform)} 빌드 받기</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
+      <p class="hint">빌드는 새 탭에서 열립니다. 플레이를 마치면 이 탭으로 돌아와 아래 설문을 작성해 주세요.</p>
       <p class="mono muted">이용 동의 ${esc(m.agreedAt||'')} · 공유와 재배포는 금지됩니다.</p>
       <form data-form="feedback" data-id="${t.id}" novalidate>
+        <h3>2. 피드백 작성</h3>
         <p class="hint">* 표시는 필수 문항입니다.</p>
         ${playedBuildHtml(t,m,'feedback-build')}${t.survey.map(questionHtml).join('')}${problemChoiceHtml(t,S.bugs,bugSummaries(),m.playedBuild||t.build)}
         <p class="err" id="fb-err" role="alert"></p>
         <button class="btn" type="submit">설문 제출</button></form></div>`;
   }else{
-    side=`<div class="panel"><h3>설문을 제출했습니다</h3><p class="muted">참여해 주셔서 감사합니다. 개발자가 결과를 확인합니다.</p></div>`;
+    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>설문을 제출했습니다</h3><p>개발자가 결과를 확인할 수 있습니다. 제보한 버그의 상태와 개발자 답변은 ‘내 버그 제보’에서 확인하세요.</p><div class="actions"><button class="btn ghost" type="button" data-act="show-own-bugs">내 버그 제보 보기</button><button class="text-link" type="button" data-act="tab-t" data-tab="mine">내 참여 현황</button></div></div>`;
   }
   const cancellation=cancellationHtml(t,S.mine[t.id]);
-  return `<button class="back" type="button" data-act="back">← 목록으로</button><div class="cols"><div class="stack">${info}</div><div class="col-side">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
+  return `<button class="back" type="button" data-act="back">← 목록으로</button><div class="cols"><div class="stack">${info}</div><div class="col-side">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel" id="own-bugs" tabindex="-1"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
 }
 
 /* ---------- developer ---------- */
@@ -356,7 +358,7 @@ function reqsHtml(t){
   const r=(t.requests||[]).filter(request=>request.id!=='me'&&request.id!==cloud?.user?.id);
   if(!r.length)return '';
   const w=r.filter(x=>x.status==='waiting').length;
-  return `<details class="res" ${w?'open':''}><summary>신청자 관리 (${r.length}${w?` · 대기 ${w}`:''})</summary><ul class="reqs">${r.map(x=>`<li><span>${esc(x.name)} ${x.agreed?'<span class="ck">동의 완료</span>':''}</span>${x.status==='waiting'
+  return `<details class="res" data-section="requests" ${w?'open':''}><summary>신청자 관리 (${r.length}${w?` · 대기 ${w}`:''})</summary><ul class="reqs">${r.map(x=>`<li><span>${esc(x.name)} ${x.agreed?'<span class="ck">동의 완료</span>':''}</span>${x.status==='waiting'
     ?`<span class="actions"><button class="btn sm" type="button" data-act="req-approve" data-id="${t.id}" data-req="${esc(x.id)}">승인</button><button class="btn ghost sm" type="button" data-act="req-decline" data-id="${t.id}" data-req="${esc(x.id)}">거절</button></span>`
     :`<span class="badge b-${REQ[x.status][1]}">${REQ[x.status][0]}</span>`}</li>`).join('')}</ul></details>`;
 }
@@ -463,16 +465,17 @@ function myTestCard(t){
   let body='';
   if(t.status==='hidden')body=`<p class="reason">운영자가 숨김 처리했습니다. ${esc(t.reason||'')}</p><div class="actions"><button class="btn sm" type="button" data-act="edit" data-id="${t.id}">수정하고 재공개 요청</button></div>`;
   else if(t.status==='appeal')body=`<p class="reason warn">재공개 요청을 운영자가 검토하고 있습니다.</p>`;
-  else body=`${slotsHtml(t)}<div class="actions"><button class="btn" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost recruitment-control" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${versionFilterHtml(t,'survey')}<div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
+  else body=`${slotsHtml(t)}<div class="actions"><button class="btn" type="button" data-act="edit" data-id="${t.id}">수정</button><button class="btn ghost recruitment-control" type="button" data-act="toggle-close" data-id="${t.id}">${t.status==='open'?'모집 종료':'모집 재개'}</button></div>${reqsHtml(t)}<details class="res" data-section="results" ${t.feedbacks.length?'open':''}><summary>설문 결과 (${t.feedbacks.length}명)</summary>${versionFilterHtml(t,'survey')}<div class="actions export-actions"><button class="btn ghost sm" type="button" data-act="export-survey" data-id="${t.id}">설문 CSV 다운로드</button><button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button></div>${summaryHtml(t)}</details>`;
   const rc=S.reports.filter(r=>r.testId===t.id&&r.status==='open').length;
-  return `<details class="managed-entry" data-game="${t.id}"><summary><div class="managed-thumb">${gameArt(t)}</div><strong data-no-translate>${esc(t.title)}</strong>${tBadge(t.status)}<span class="game-disclosure" aria-hidden="true">⌄</span></summary><article class="card managed-game"><div class="managed-art">${gameArt(t)}</div><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
+  const waiting=(t.requests||[]).filter(request=>request.status==='waiting'&&request.id!=='me'&&request.id!==cloud?.user?.id).length;
+  return `<details class="managed-entry" data-game="${t.id}"><summary><div class="managed-thumb">${gameArt(t)}</div><strong data-no-translate>${esc(t.title)}</strong>${tBadge(t.status)}${waiting&&t.status==='open'?`<span class="badge b-pending">승인 대기 ${waiting}명</span>`:''}<span class="game-disclosure" aria-hidden="true">⌄</span></summary><article class="card managed-game"><div class="managed-art">${gameArt(t)}</div><div class="card-top mono"><span class="tag">${esc(t.build)}</span><span class="tag">${esc(t.platform)}</span><span class="sp pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
     <div class="card-body"><h3 data-no-translate>${esc(t.title)}</h3><p class="teaser" data-no-translate>${esc(t.teaser)}</p><p class="meta">${gameGenreHtml(t)} · 약 ${t.minutes}분 · 설문 ${t.survey.length}문항</p>${t.vis==='invite'?`<p class="meta">초대 코드 <span class="code">${esc(t.code)}</span></p>`:''}${rc?`<p class="meta">접수된 신고 ${rc}건 · 운영자가 확인 중</p>`:''}<div class="managed-deadline">${deadlineHtml(t)}</div></div><div class="foot manage-controls">${body}<div class="actions game-delete-actions">${remove}</div></div></article></details>`;
 }
 function renderDeveloper(){
   const mine=S.tests.filter(t=>t.owner==='me');
   const items=[['mine','내 게임 관리'],['new',ui.edit?'테스트 수정':'게임 등록'],['drafts','임시 저장'],['results','설문 결과'],['bugs','버그 제보']];
   const side=sectionNav('개발자 메뉴','tab-d',ui.dTab,items);
-  const head=`<div class="dashboard-heading"><h1>${items.find(([key])=>key===ui.dTab)?.[1]||'내 게임 관리'}</h1>${ui.dTab==='mine'&&(!cloud||cloud.user)?'<button class="btn" data-act="tab-d" data-tab="new">+ 게임 등록</button>':''}</div>`;
+  const head=`<div class="dashboard-heading"><h1>${items.find(([key])=>key===ui.dTab)?.[1]||'내 게임 관리'}</h1>${ui.dTab==='mine'&&(!cloud||cloud.user)?`<div class="actions">${cloud?'<button class="btn ghost" type="button" data-act="refresh-flow">신청 현황 새로고침</button>':''}<button class="btn" data-act="tab-d" data-tab="new">+ 게임 등록</button></div>`:''}</div>`;
   const page=body=>workspace(side,head+body);
   if(cloud&&!cloud.user)return page('<section class="spotlight"><div><p>로그인하면 테스트를 등록하고 신청자와 피드백을 관리할 수 있습니다.</p><button type="button" class="btn" data-act="account-login">로그인</button></div>'+islandArt()+'</section>');
   const bugCount=S.bugs.filter(b=>mine.some(t=>t.id===b.testId)).length;
@@ -480,7 +483,8 @@ function renderDeveloper(){
   if(ui.dTab==='drafts')return page(draftsHtml());
   if(ui.dTab==='bugs')return page(bugCount?mine.filter(t=>S.bugs.some(b=>b.testId===t.id)).map(t=>`<section class="panel"><h2 data-no-translate>${esc(t.title)}</h2>${versionFilterHtml(t,'bugs')}<button class="btn ghost sm" type="button" data-act="export-bugs" data-id="${t.id}">버그 CSV 다운로드</button>${bugListHtml(t,filterBuild(S.bugs,ui.bugBuild[t.id]||'all'),{developer:true})}</section>`).join(''):'<p class="empty">아직 버그 제보가 없습니다.</p>');
   if(ui.dTab==='new')return page(devForm());
-  return page(mine.length?`<div class="managed-games">${mine.map(myTestCard).join('')}</div>`:'<div class="spotlight"><p>등록한 테스트가 없습니다. 새 테스트 등록 탭에서 첫 게임을 올려 보세요.</p>'+islandArt()+'</div>');
+  const published=mine.find(t=>t.id===ui.publishedGame&&t.status==='open');
+  return page(mine.length?`${published?'<p class="notice" id="published-notice" tabindex="-1">게임을 공개했습니다. 이 목록에서 신청을 확인하고 게임을 관리할 수 있습니다.</p>':''}<div class="managed-games">${mine.map(myTestCard).join('')}</div>`:'<div class="spotlight"><p>등록한 테스트가 없습니다. 새 테스트 등록 탭에서 첫 게임을 올려 보세요.</p>'+islandArt()+'</div>');
 }
 
 /* ---------- admin ---------- */
@@ -533,12 +537,24 @@ function restoreFeedbackDraft(){
 }
 function openBugFromSurvey(){const panel=$('.bug-report-panel');if(panel){panel.open=true;panel.scrollIntoView({block:'start',behavior:'smooth'});$('#bug-title')?.focus({preventScroll:true});}}
 function render(capture=true){
+ const expanded=new Map();
+ for(const game of document.querySelectorAll?.('.managed-entry')||[]){
+  expanded.set(game.dataset.game,game.open?[...game.querySelectorAll('[data-section][open]')].map(section=>section.dataset.section):null);
+ }
  if(capture){captureFeedbackDraft();syncDraft();}
   renderMenu();
   const p=ui.page;
   $('#main').dataset.page=p;
   $('#main').innerHTML=p==='home'?renderHome():p==='tester'?renderTester():p==='developer'?renderDeveloper():(!cloud||cloud.canAdmin)?renderAdmin():'<p class="notice">운영자 권한이 필요합니다.</p>';
-  for(const node of document.querySelectorAll?.('.managed-entry')||[]){if(expanded.includes(node.dataset.game))node.open=true;}
+  for(const game of document.querySelectorAll?.('.managed-entry')||[]){
+    const sections=expanded.get(game.dataset.game);
+    if(!expanded.has(game.dataset.game)&&ui.publishedGame===game.dataset.game)game.open=true;
+    if(!sections)continue;
+    game.open=true;
+    for(const section of game.querySelectorAll('[data-section]')){
+      if(sections.includes(section.dataset.section))section.open=true;
+    }
+  }
   restoreDevFields();
   restoreFeedbackDraft();
   mediaHydrator.hydrate($('#main'));
@@ -548,6 +564,7 @@ function nav(page,sub,saved=false){
   syncDraft();
   clearUploads();
   ui.gallery=null;
+  ui.publishedGame=null;
   ui.page=PAGES.includes(page)?page:'home';
   ui.detail=null;ui.reporting=null;ui.hiding=null;ui.edit=null;ui.draft=null;ui.devFields=null;ui.draftStatus='';
   if(ui.page==='tester')ui.tTab=sub||'mine';
@@ -589,6 +606,21 @@ listen(document,'click',async e=>{
   if(n){e.preventDefault();return nav(n.dataset.nav,n.dataset.sub)}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
   const a=b.dataset.act,id=b.dataset.id;
+  if(a==='show-own-bugs'){$('#own-bugs')?.focus();return;}
+  if(a==='refresh-flow'&&cloud){
+    const identity=cloud.user?.id;
+    ui.saving=true;b.disabled=true;
+    try{
+      const snapshot=await cloud.snapshot();
+      if(identity!==cloud.user?.id)return;
+      S=migrateFeatures(snapshot);
+      render();
+      ($('[data-act="refresh-flow"]')||$('#participation-next'))?.focus();
+      toast('최신 상태를 확인했습니다.');
+    }catch{toast('상태를 확인하지 못했습니다. 다시 시도해 주세요.');}
+    finally{ui.saving=false;b.disabled=false;}
+    return;
+  }
   if(a==='play-next'){
     const application=S.mine[id];if(!application||application.status!=='applied')return;
     if(!application.startedAt){
@@ -626,7 +658,7 @@ listen(document,'click',async e=>{
   if(a==='feature'){ui.featured=id;render();return;}
   if(a==='clear-filters'){ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
   if(a==='tab-t'){if(b.dataset.tab==='saved'&&cloud&&!cloud.requireUser())return;releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.tTab=b.dataset.tab;ui.detail=null;return render()}
-  if(a==='tab-d'){if(cloud&&!cloud.user){cloud.requireUser();return;}if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
+  if(a==='tab-d'){if(cloud&&!cloud.user){cloud.requireUser();return;}if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.publishedGame=null;ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
   if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;return render()}
   if(a==='genre'){ui.genre=b.dataset.genre;return render()}
   if(a==='open'){releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.gallery=null;ui.page='tester';ui.detail=id;ui.reporting=null;render();return top()}
@@ -767,7 +799,7 @@ listen(document,'submit',async e=>{
   if(ui.saving)return;
   if(['apply','feedback','bug'].includes(f.dataset.form)&&byId(f.dataset.id)?.owner==='me')return;
   if(f.dataset.form==='apply'){
-    if(cloud){if(await remoteCommand('apply',{testId:f.dataset.id,agreed:$('#ap-agree').checked,code:$('#ap-code')?.value.trim().toUpperCase()||''})){render();toast('신청을 저장했습니다.');}return;}
+    if(cloud){if(await remoteCommand('apply',{testId:f.dataset.id,agreed:$('#ap-agree').checked,code:$('#ap-code')?.value.trim().toUpperCase()||''})){render();$('#participation-next')?.focus();toast('신청을 저장했습니다.');}return;}
     const t=byId(f.dataset.id),err=$('#ap-err');
     if(t.status!=='open'||deadlineState(t.deadline)==='overdue'){err.textContent='모집이 종료되었습니다.';return}
     if(t.vis==='invite'){
@@ -826,7 +858,7 @@ listen(document,'submit',async e=>{
       if(q.required&&val===''){err.textContent='필수 문항에 답해 주세요: '+q.label;return}
       if(val!=='')answers[q.id]=val;
     }
-    if(cloud){if(await remoteCommand('feedback',{testId:t.id,answers,build,issueStatus:issueChoice,bugIds:['reported','existing'].includes(issueChoice)?bugIds:[]})){delete ui.feedbackDrafts[t.id];render(false);toast('설문을 제출했습니다.');}return;}
+    if(cloud){if(await remoteCommand('feedback',{testId:t.id,answers,build,issueStatus:issueChoice,bugIds:['reported','existing'].includes(issueChoice)?bugIds:[]})){delete ui.feedbackDrafts[t.id];render(false);$('#participation-next')?.focus();toast('설문을 제출했습니다.');}return;}
     const previous=clone(S);
     t.feedbacks.push({answers,build,surveySnapshot:clone(t.survey),issueStatus:issueChoice,bugIds:['reported','existing'].includes(issueChoice)?bugIds:[]});
     S.mine[t.id]=Object.assign({},S.mine[t.id],{status:'done'});if(!save()){S=previous;return;}delete ui.feedbackDrafts[t.id];render(false);return toast('설문을 제출했습니다.');
@@ -882,12 +914,14 @@ listen(document,'submit',async e=>{
     d.media=ui.mediaDraft.map(mediaMetadata);
     ui.saving=true;const submit=f.querySelector('[type="submit"]');if(submit)submit.disabled=true;
     try{await saveMedia(pending);}catch(error){ui.saving=false;if(submit)submit.disabled=false;err.textContent='파일을 저장하지 못했습니다. 저장 공간과 브라우저 설정을 확인해 주세요.';return;}
-    if(cloud){ui.saving=false;if(await remoteCommand('save_test',{testId:ui.edit,data:d})){await clearPublishedDraft(ui.edit);clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';render(false);top();toast('테스트를 저장했습니다.');await removeMedia(oldIds.filter(id=>!d.media.some(m=>m.id===id))).catch(()=>{});}else{if(submit)submit.disabled=false;await removeMedia(pending.map(m=>mediaMetadata(m).id)).catch(()=>{});}return;}
+    if(cloud){ui.saving=false;if(await remoteCommand('save_test',{testId:ui.edit,data:d})){const previousGameIds=new Set(oldState.tests.map(t=>t.id));ui.publishedGame=ui.edit?null:S.tests.find(t=>t.owner==='me'&&!previousGameIds.has(t.id))?.id;await clearPublishedDraft(ui.edit);clearUploads();ui.edit=null;ui.draft=null;ui.dTab='mine';render(false);top();$('#published-notice')?.focus();toast('테스트를 저장했습니다.');await removeMedia(oldIds.filter(id=>!d.media.some(m=>m.id===id))).catch(()=>{});}else{if(submit)submit.disabled=false;await removeMedia(pending.map(m=>mediaMetadata(m).id)).catch(()=>{});}return;}
     if(ui.edit){
+      ui.publishedGame=null;
       const t=byId(ui.edit),was=t.status;d.builds=[...new Set([...(t.builds||[]),t.build,d.build].filter(Boolean))];Object.assign(t,d);
       if(was==='hidden'){t.status='appeal';msg='수정했습니다. 운영자가 재공개 여부를 검토합니다.'}else msg='수정 내용을 저장했습니다.';
     }else{
-      S.tests.push(Object.assign({id:'t'+Date.now(),createdDate:today(),owner:'me',status:'open',applicants:0,feedbacks:[],requests:[],builds:[d.build]},d));
+      ui.publishedGame='t'+Date.now();
+      S.tests.push(Object.assign({id:ui.publishedGame,createdDate:today(),owner:'me',status:'open',applicants:0,feedbacks:[],requests:[],builds:[d.build]},d));
       msg='등록했습니다. 테스트가 바로 공개되었습니다.';
     }
     if(!save()){S=oldState;ui.saving=false;if(submit)submit.disabled=false;await removeMedia(pending.map(m=>m.id)).catch(()=>{});return;}
@@ -901,7 +935,7 @@ let disposeAccount;
 if(cloud){
  const footer=document.querySelector('footer p');if(footer)footer.textContent='PlayTest Match · 개발자와 플레이어가 함께 만드는 게임.';
  document.querySelector('footer [data-act="reset"]')?.remove();
- disposeAccount=cloud.mountAccount(async reset=>{if(reset){if(draftOwner===currentDraftOwner())await persistDeveloperDraft();draftOwner=currentDraftOwner();clearTimeout(draftTimer);ui.devFields=null;ui.savedDrafts=[];ui.draftReady=false;clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';location.hash='#home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());await loadDeveloperDrafts();render();});
+ disposeAccount=cloud.mountAccount(async reset=>{if(reset){if(draftOwner===currentDraftOwner())await persistDeveloperDraft();draftOwner=currentDraftOwner();clearTimeout(draftTimer);ui.devFields=null;ui.savedDrafts=[];ui.draftReady=false;clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';location.hash='#home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();ui.publishedGame=null;S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());await loadDeveloperDrafts();render();});
 }
 const h0=hashPage();if(h0)ui.page=h0;
 render();

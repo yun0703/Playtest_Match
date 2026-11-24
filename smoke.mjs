@@ -8,6 +8,15 @@ globalThis.localStorage={getItem(){return null},setItem(){}};
 for(const target of [document,window])target.addEventListener=(type,fn)=>{handlers[type]=fn};
 const dispose=initialize();
 for(const page of ['home','tester','developer','admin']){location.hash='#'+page;handlers.hashchange();if(!elements.get('#main').innerHTML.length)throw Error('Empty '+page);console.log('PASS render '+page);}
+location.hash='#developer';handlers.hashchange();
+const openRequest={dataset:{section:'requests'}},restoredRequest={dataset:{section:'requests'},open:false};
+const openGame={dataset:{game:'t1'},open:true,querySelectorAll:()=>[openRequest]};
+const restoredGame={dataset:{game:'t1'},open:false,querySelectorAll:()=>[restoredRequest]};
+let managedQueries=0;
+document.querySelectorAll=selector=>selector==='.managed-entry'?[managedQueries++===0?openGame:restoredGame]:[];
+await handlers.click({target:{closest:s=>s==='[data-act]'?{dataset:{act:'tab-d',tab:'mine'}}:null}});
+if(!restoredGame.open||!restoredRequest.open)throw Error('Game management lost its expanded sections after rendering');
+delete document.querySelectorAll;
 location.hash='#tester';handlers.hashchange();
 await handlers.click({target:{closest:s=>s==='[data-act]'?{dataset:{act:'tab-t',tab:'alerts'}}:null}});
 if(!elements.get('#main').innerHTML.includes('notification-page'))throw Error('Tester alerts did not render in the main view');

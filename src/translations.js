@@ -1,4 +1,17 @@
 export default {
+  "신청이 접수되었습니다": "Application received",
+  "개발자가 승인하면 이 화면에서 빌드를 열 수 있습니다. 나중에는 테스터 메뉴의 ‘내 참여 현황’에서 이 테스트를 다시 열 수 있습니다.": "Once approved, you can open the build here. Reopen this test anytime from My participation in the Tester menu.",
+  "승인 상태 확인": "Check approval status",
+  "1. 빌드 열기": "1. Open the build",
+  "2. 피드백 작성": "2. Write feedback",
+  "빌드는 새 탭에서 열립니다. 플레이를 마치면 이 탭으로 돌아와 아래 설문을 작성해 주세요.": "The build opens in a new tab. After playing, return to this tab and complete the survey below.",
+  "개발자가 결과를 확인할 수 있습니다. 제보한 버그의 상태와 개발자 답변은 ‘내 버그 제보’에서 확인하세요.": "The developer can see your response. Check My bug reports for updates and replies.",
+  "내 버그 제보 보기": "View my bug reports",
+  "신청 현황 새로고침": "Refresh applications",
+  "최신 상태를 확인했습니다.": "Status refreshed.",
+  "상태를 확인하지 못했습니다. 다시 시도해 주세요.": "Could not refresh the status. Try again.",
+  "게임을 공개했습니다. 이 목록에서 신청을 확인하고 게임을 관리할 수 있습니다.": "Your game is public. Review applications and manage your game from this list.",
+
   "사용자 이름이나 비밀번호가 없는 유효한 HTTPS 빌드 링크를 입력해 주세요.": "Enter a valid HTTPS build link without a username or password.",
   "선택 완료": "Done",
   "장르 선택": "Select genres",

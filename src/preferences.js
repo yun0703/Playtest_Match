@@ -4,6 +4,7 @@ export const PREFERENCE_KEY='playtest-match-preferences-v1';
 export function normalizePreferences(value){return {theme:value?.theme==='dark'?'dark':'light',language:value?.language==='en'?'en':'ko'};}
 export function readPreferences(storage){try{return normalizePreferences(JSON.parse(storage.getItem(PREFERENCE_KEY)));}catch{return normalizePreferences(null);}}
 const variableTranslations=[
+ [/^승인 대기 (\d+)명$/,(_,n)=>`Awaiting approval · ${n}`],
  [/^(\s*)찜한 게임 (\d+)(\s*)$/,(_,a,n,b)=>`${a}Saved games ${n}${b}`],
  [/^(\s*)(\d+)명 참여(\s*)$/,(_,a,n,b)=>`${a}${n} participants${b}`],
  [/^미디어 (\d+)$/,(_,n)=>`Media ${n}`],
