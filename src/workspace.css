@@ -103,7 +103,7 @@
 .choice-editor>div {display:flex;gap:10px;align-items:end}
 .choice-editor label {display:grid;gap:4px;flex:1;min-width:0}
 .choice-editor>.btn {justify-self:start}
-.managed-entry {border-bottom:1px solid var(--line)}
+.managed-row {border-bottom:1px solid var(--line)}
 .managed-entry>summary {display:grid;grid-template-columns:clamp(70px,15vw,150px) minmax(0,1fr) auto auto;align-items:center;gap:clamp(8px,2vw,24px);padding:14px 0;cursor:pointer;list-style:none}
 .managed-entry>summary::-webkit-details-marker {display:none}
 .managed-entry>summary strong {font-size:clamp(15px,2vw,22px);overflow-wrap:anywhere}
@@ -157,8 +157,25 @@ fieldset.field {min-width:0}
 .selected-genre-tags {display:flex;align-items:flex-start;gap:6px;height:33px;overflow-x:auto;scrollbar-width:thin}
 .selected-genre-tags>span {flex:none;border-radius:30px;padding:3px 10px;font-size:12px;white-space:nowrap}
 
-.managed-entry>summary>.b-pending {grid-column:3;grid-row:2}
 .managed-entry .game-disclosure {grid-column:4;grid-row:1}
 #published-notice {margin-bottom:12px}
 
 .notification-panel .approval-notice-link {color:var(--accent);font-weight:650}
+
+
+.game-work-items {display:flex;flex-wrap:wrap;gap:6px 10px;padding:0 0 12px}
+.work-count {display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:30px;padding:5px 10px;background:var(--surface);color:var(--ink-2);font-size:13px}
+button.work-count {color:var(--ink)}
+button.work-count:hover {background:var(--accent-soft);border-color:var(--accent)}
+.work-count strong {font-variant-numeric:tabular-nums}
+.survey-results {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:22px;align-items:start;padding-block:12px}
+.survey-results-question {min-width:0;padding:12px 14px;border-left:3px solid var(--button);background:var(--surface-2);border-radius:0 10px 10px 0}
+.survey-results-question p {white-space:pre-wrap;overflow-wrap:anywhere}
+.survey-results-question .hint {margin-top:8px}
+.survey-results-data {min-width:0}
+.survey-results-data>.version-filter {margin-top:0}
+@media(max-width:760px) {
+ .survey-results {grid-template-columns:minmax(0,1fr);gap:12px}
+}
+
+[data-act="toggle-unresolved"][aria-pressed=true] {background:var(--accent-soft);border-color:var(--accent)}

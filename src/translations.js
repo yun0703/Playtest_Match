@@ -1,4 +1,12 @@
 export default {
+  "미해결 버그만": "Unresolved bugs only",
+  "새 설문": "New responses",
+  "미해결 버그": "Unresolved bugs",
+  "현재 등록된 테스트 목표입니다.": "This is the current playtest objective.",
+  "등록된 질문이 없습니다.": "No developer question has been provided.",
+  "표시된 응답 확인 완료": "Mark displayed responses as reviewed",
+  "표시된 설문 응답을 확인했습니다.": "Displayed responses marked as reviewed.",
+
   "참여가 승인됐어요": "Your application was approved",
   "알림 새로고침": "Refresh notifications",
   "알림을 새로고침하지 못했습니다.": "Could not refresh notifications.",
