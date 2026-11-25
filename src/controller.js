@@ -118,7 +118,7 @@ function save(){if(cloud)throw new Error('서버 모드에서 로컬 변경은 �
 
 let S=migrateFeatures(cloud?initialState:load());
 let mediaHydrator=createMediaHydrator();
-const ui={publishedGame:null,logGame:null,unresolvedBugGame:null,resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
+const ui={guest:null,publishedGame:null,logGame:null,unresolvedBugGame:null,resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function safeUrl(value){
@@ -146,6 +146,11 @@ function updateGenreSummary(){
   $('#selected-genre-tags').innerHTML=genreTags(selectedGenres());
 }
 function updateDevSelectors(){
+  const allowGuests=$('#f-allow-guests');
+  if(allowGuests){
+    allowGuests.disabled=$('#f-vis').value!=='public'||$('#f-platform').value!=='WebGL';
+    if(allowGuests.disabled)allowGuests.checked=false;
+  }
   const unlimited=$('#f-unlimited').checked;
   $('#f-slots').disabled=unlimited;
   $('#capacity-stepper').hidden=unlimited;
@@ -158,6 +163,7 @@ function captureDevFields(){
   ui.devFields=Object.fromEntries(DEV_FIELDS.map(id=>[id,$('#'+id).value]));
   ui.devFields['f-genres']=selectedGenres();
   ui.devFields['f-unlimited']=$('#f-unlimited').checked;
+  ui.devFields['f-allow-guests']=$('#f-allow-guests')?.checked||false;
   return true;
 }
 function restoreDevFields(){
@@ -166,6 +172,7 @@ function restoreDevFields(){
   const genres=ui.devFields['f-genres']??[ui.devFields['f-genre']];
   document.querySelectorAll('[name="f-genres"]').forEach(input=>{input.checked=genres.includes(input.value);});
   $('#f-unlimited').checked=!!ui.devFields['f-unlimited'];
+  if($('#f-allow-guests'))$('#f-allow-guests').checked=!!ui.devFields['f-allow-guests'];
   $('#f-limited').checked=!$('#f-unlimited').checked;
   updateDevSelectors();
   updateGenreSummary();
@@ -181,7 +188,14 @@ async function clearPublishedDraft(edit){clearTimeout(draftTimer);const owner=cu
 function draftsHtml(){return `<section class="panel"><h2>임시 저장</h2><p class="hint">같은 계정과 이 브라우저에서 이어서 작성할 수 있습니다. 브라우저 데이터를 지우면 삭제됩니다. 공개 등록 전에는 다른 사람에게 보이지 않습니다.</p>${!ui.draftReady?'<p>불러오는 중…</p>':!ui.savedDrafts.length?'<p class="empty">임시 저장한 게임이 없습니다.</p>':ui.savedDrafts.map(d=>`<article class="draft-row"><div><h3 data-no-translate>${esc(d.fields['f-title']||'제목 없는 게임')}</h3><p class="hint"><span>${d.edit?'수정 중':'새 게임'}</span> · <time>${esc(new Date(d.updatedAt).toLocaleString('ko-KR'))}</time></p></div><div class="actions"><button class="btn ghost sm" type="button" data-act="resume-draft" data-id="${esc(d.key)}">이어서 작성</button><button class="text-link" type="button" data-act="delete-draft" data-id="${esc(d.key)}">삭제</button>${ui.draftDelete===d.key?`<p>이 브라우저의 임시 저장과 첨부파일을 삭제합니다. 공개된 게임은 유지됩니다.</p><button class="btn danger sm" type="button" data-act="confirm-delete-draft" data-id="${esc(d.key)}">임시 저장 삭제 확정</button><button class="btn ghost sm" type="button" data-act="keep-draft">유지</button>`:''}</div></article>`).join('')}</section>`;}
 function updateMediaEditor(){const el=$('#media-preview');if(el){el.innerHTML=mediaEditor(ui.mediaDraft||[]);mediaHydrator.hydrate(el);}}
 function updateBugPreview(){const el=$('#bug-preview');if(el)el.innerHTML=ui.bugMedia.map(x=>fileView(x,{preview:true})+`<button class="text-link" type="button" data-act="bug-file-remove">삭제</button>`).join('');}
-function refreshDeadlines(){renderNotifications();const main=$('#main');if(main?.querySelectorAll)main.querySelectorAll('[data-deadline-test]').forEach(el=>{const test=byId(el.dataset.deadlineTest);if(test)el.outerHTML=deadlineHtml(test);});if((ui.page==='home'||ui.page==='tester'&&ui.tTab==='open')&&main?.querySelector?.('.deadline-line.overdue'))render(false);}
+function refreshDeadlines(){
+ const test=byId(ui.detail),active=test&&guestFor(test.id);
+ if(active&&(!recruitmentOpen(test)||!active.submitted&&Date.parse(active.expiresAt)<=Date.now())){
+  captureFeedbackDraft();
+  ui.guest=null;
+  render(false);
+ }
+ renderNotifications();const main=$('#main');if(main?.querySelectorAll)main.querySelectorAll('[data-deadline-test]').forEach(el=>{const test=byId(el.dataset.deadlineTest);if(test)el.outerHTML=deadlineHtml(test);});if((ui.page==='home'||ui.page==='tester'&&ui.tTab==='open')&&main?.querySelector?.('.deadline-line.overdue'))render(false);}
 
 const tBadge=s=>`<span class="badge b-${TBADGE[s]}">${TSTATUS[s]}</span>`;
 const visBadge=v=>`<span class="badge b-vis">${VIS[v]||VIS.public}</span>`;
@@ -211,6 +225,12 @@ function gameArt(t, hero=false){
  return `<div class="game-art art-${index===undefined?'new':index} ${hero?'hero-art':''}" role="img" aria-label="${esc(t.title)} 예시 게임 아트워크"><span class="art-caption">CONCEPT ART · 예시 이미지</span></div>`;
 }
 function favoriteButton(t){const saved=S.favorites.includes(t.id);return `<button class="favorite-button ${saved?'saved':''}" type="button" data-act="favorite" data-id="${esc(t.id)}" aria-pressed="${saved}" aria-label="${saved?'찜 해제':'게임 찜'}"><span aria-hidden="true">${saved?'♥':'♡'}</span><span>${saved?'찜한 게임':'찜하기'}</span></button>`;}
+function guestAvailable(test){return !!cloud&&!cloud.user&&test?.allowGuests===true&&test.vis==='public'&&test.platform==='WebGL'&&recruitmentOpen(test);}
+function guestFor(id){return !cloud?.user&&ui.guest?.id===id?ui.guest?.participation:null;}
+function detailTest(id){
+ const test=byId(id),guest=guestFor(id);
+ return guest&&test?{...test,link:guest.link,how:guest.how,survey:guest.survey,applicants:guest.applicants}:test;
+}
 function bugSummaries(){return cloud?S.bugSummaries:S.bugs.map(b=>({id:b.id,testId:b.testId,title:b.title,status:b.status,build:b.build,own:b.testerId==='me'}));}
 function selectedBugIds(form){const choice=form.querySelector('[name="problem-choice"]:checked')?.value;return [...form.querySelectorAll(`[data-link-choice="${choice}"] [name="linked-bugs"]:checked`)].map(el=>el.value);}
 function updateDuplicates(){const form=$('[data-form="bug"]'),node=$('#similar-bugs');if(form&&node)node.innerHTML=duplicateBugHtml($('#bug-title').value,bugSummaries(),form.dataset.id,$('#bug-build').value);}
@@ -299,46 +319,51 @@ function reportPanel(t){
       <div class="actions"><button class="btn" type="submit">신고 접수</button><button class="btn ghost" type="button" data-act="report-cancel">취소</button></div></form></div>`;
 }
 function renderDetail(t){
-  const own=t.owner==='me',m=own?null:S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=capacityFull(t),url=safeUrl(t.link);
+  const guest=guestFor(t.id),guestEnabled=guestAvailable(t),guestBugs=guest?.bugs||S.bugs;
+  t=detailTest(t.id);
+  const own=t.owner==='me',m=guest?{status:guest.submitted?'done':'applied',playedBuild:guest.playedBuild}:own?null:S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=capacityFull(t),url=safeUrl(t.link);
   const guarded=access
     ?`<div><h3>플레이 방법</h3><p style="margin-top:6px">${esc(t.how)}</p></div>
       <div><h3>이 설문에 답해 주세요</h3><ol class="qs" style="margin-top:6px">${t.survey.map(q=>`<li>${esc(q.label)} <span class="mono muted">${QTYPE[q.type]}</span></li>`).join('')}</ol></div>`
     :`<div class="lock"><span class="mono">LOCKED</span><p>플레이 방법, 설문 문항, 빌드 링크는 이용 동의 후 참여가 열리면 공개됩니다.</p></div>`;
-  const info=`${progressHtml(t,m)}${focusHtml(t)}${t.media.length?galleryHtml(t,ui.gallery):`<div class="detail-cover">${gameArt(t)}</div>`}<div class="panel"><div class="row"><div class="stack" style="gap:4px"><h2 data-no-translate>${esc(t.title)}</h2><p class="muted">${esc(t.team)}</p></div><span class="pair">${own?'<span class="badge b-mine">내 테스트</span>':''}${t.status!=='open'?tBadge(t.status):''}${visBadge(t.vis)}</span></div>
+  const info=`${guest?'':progressHtml(t,m)}${focusHtml(t)}${t.media.length?galleryHtml(t,ui.gallery):`<div class="detail-cover">${gameArt(t)}</div>`}<div class="panel"><div class="row"><div class="stack" style="gap:4px"><h2 data-no-translate>${esc(t.title)}</h2><p class="muted">${esc(t.team)}</p></div><span class="pair">${own?'<span class="badge b-mine">내 테스트</span>':''}${t.status!=='open'?tBadge(t.status):''}${visBadge(t.vis)}${t.allowGuests?'<span class="badge b-vis">익명 참여 가능</span>':''}</span></div>
     ${favoriteButton(t)}<p data-no-translate>${esc(t.teaser)}</p>
     <dl class="facts"><dt>BUILD</dt><dd class="mono">${esc(t.build)}</dd><dt>PLATFORM</dt><dd>${esc(t.platform)}</dd><dt>GENRE</dt><dd>${gameGenreHtml(t)}</dd><dt>TIME</dt><dd>약 ${t.minutes}분</dd><dt>SLOTS</dt><dd>${slotsHtml(t)}</dd><dt>ACCESS</dt><dd>${VIS[t.vis]} · ${VIS_DESC[t.vis]}</dd></dl>
     ${deadlineHtml(t)}${guarded}</div>`;
   let side;
   if(own)side='<div class="notice">내가 등록한 게임에는 테스터로 참여할 수 없습니다.</div>';
-  else if(!m){
-    const btn=t.vis==='approval'?'동의하고 승인 요청':'동의하고 신청';
+  else if(guestEnabled&&ui.guest?.id===t.id&&ui.guest.loading){
+    side='<div class="panel" role="status">익명 참여 상태를 불러오는 중…</div>';
+  }else if(!m){
+    const btn=guestEnabled?'동의하고 익명 테스트 시작':t.vis==='approval'?'동의하고 승인 요청':'동의하고 신청';
     side=`<div class="panel"><h3>참여하기</h3>
-      <form data-form="apply" data-id="${t.id}" novalidate>
+      <form data-form="${guestEnabled?'guest-join':'apply'}" data-id="${t.id}" novalidate>
+        ${guestEnabled?'<p class="hint">익명 참여는 이 브라우저에 저장됩니다. 설문은 한 번 제출할 수 있고, 참여 시간은 시작 후 2시간입니다.</p>':''}
         ${t.vis==='invite'?`<div class="field"><label for="ap-code">초대 코드</label><input type="text" id="ap-code" autocomplete="off" maxlength="12"><span class="hint">개발자에게 받은 코드를 입력해 주세요.</span></div>`:''}
         <div class="terms"><p class="mono">이용 동의서</p><ol class="qs">${TERMS.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>
         <label class="check"><input type="checkbox" id="ap-agree"><span>위 내용을 읽고 동의합니다.</span></label>
         <p class="err" id="ap-err" role="alert"></p>
-        <button class="btn" type="submit" ${(full||closed)?'disabled':''}>${closed?'모집 종료':full?'모집 마감':btn}</button></form></div>`;
+        <button class="btn" type="submit" ${(closed||full&&!guestEnabled)?'disabled':''}>${closed?'모집 종료':full&&!guestEnabled?'모집 마감':btn}</button>${guestEnabled?'<button class="text-link" type="button" data-act="account-login">로그인하고 참여</button>':''}</form></div>`;
   }else if(st==='waiting'){
     side=`<div class="panel" id="participation-next" tabindex="-1"><h3>신청이 접수되었습니다</h3><p>개발자가 승인하면 이 화면에서 빌드를 열 수 있습니다. 나중에는 테스터 메뉴의 ‘내 참여 현황’에서 이 테스트를 다시 열 수 있습니다.</p><div class="actions">${cloud?'<button class="btn ghost" type="button" data-act="refresh-flow">승인 상태 확인</button>':''}<button class="text-link" type="button" data-act="tab-t" data-tab="mine">내 참여 현황</button></div></div>`;
   }else if(st==='declined'){
     side=`<div class="panel"><h3>이번 테스트에는 참여할 수 없습니다</h3><p class="muted">개발자가 신청을 받지 않았습니다. 다른 테스트를 둘러보세요.</p></div>`;
   }else if(st==='applied'){
-    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>1. 빌드 열기</h3>${url?`<a class="btn" id="playtest-build-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(t.platform)} 빌드 받기</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
+    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>1. 빌드 열기</h3>${url?`<a class="btn" id="playtest-build-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${guest?'웹 빌드 열기':esc(t.platform)+' 빌드 받기'}</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
       <p class="hint">빌드는 새 탭에서 열립니다. 플레이를 마치면 이 탭으로 돌아와 아래 설문을 작성해 주세요.</p>
-      <p class="mono muted">이용 동의 ${esc(m.agreedAt||'')} · 공유와 재배포는 금지됩니다.</p>
+      <p class="mono muted">${guest?'익명 참여 중':'이용 동의 '+esc(m.agreedAt||'')} · 공유와 재배포는 금지됩니다.</p>
       <form data-form="feedback" data-id="${t.id}" novalidate>
         <h3>2. 피드백 작성</h3>
         <p class="hint">* 표시는 필수 문항입니다.</p>
-        ${playedBuildHtml(t,m,'feedback-build')}${t.survey.map(questionHtml).join('')}${problemChoiceHtml(t,S.bugs,bugSummaries(),m.playedBuild||t.build)}
+        ${playedBuildHtml(t,m,'feedback-build')}${t.survey.map(questionHtml).join('')}${problemChoiceHtml(t,guestBugs,guest?[]:bugSummaries(),m.playedBuild||t.build,{guest:!!guest})}
         <p class="err" id="fb-err" role="alert"></p>
         <button class="btn" type="submit">설문 제출</button></form></div>`;
   }else{
-    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>설문을 제출했습니다</h3><p>개발자가 결과를 확인할 수 있습니다. 제보한 버그의 상태와 개발자 답변은 ‘내 버그 제보’에서 확인하세요.</p><div class="actions"><button class="btn ghost" type="button" data-act="show-own-bugs">내 버그 제보 보기</button><button class="text-link" type="button" data-act="tab-t" data-tab="mine">내 참여 현황</button></div></div>`;
+    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>설문을 제출했습니다</h3><p>개발자가 결과를 확인할 수 있습니다. 제보한 버그의 상태와 개발자 답변은 ‘내 버그 제보’에서 확인하세요.</p><div class="actions"><button class="btn ghost" type="button" data-act="show-own-bugs">내 버그 제보 보기</button>${guest?'':'<button class="text-link" type="button" data-act="tab-t" data-tab="mine">내 참여 현황</button>'}</div></div>`;
   }
   const cancellation=cancellationHtml(t,S.mine[t.id]);
   const mobileTask=own?'':st==='applied'?'빌드 및 피드백':st==='done'?'제출 결과 보기':m?'신청 상태 보기':'참여하기';
-  return `<div class="detail-navigation"><button class="back" type="button" data-act="back">← 목록으로</button>${mobileTask?`<button class="btn ghost mobile-task" type="button" data-act="jump-participation">${mobileTask}</button>`:''}</div><div class="cols"><div class="stack">${info}</div><div class="col-side" id="participation-actions" tabindex="-1">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel" id="own-bugs" tabindex="-1"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
+  return `<div class="detail-navigation"><button class="back" type="button" data-act="back">← 목록으로</button>${mobileTask?`<button class="btn ghost mobile-task" type="button" data-act="jump-participation">${mobileTask}</button>`:''}</div><div class="cols"><div class="stack">${info}</div><div class="col-side" id="participation-actions" tabindex="-1">${side}${cancellation}${bugFormHtml(t,m,{guest:!!guest})}${m&&['applied','done'].includes(m.status)?`<section class="panel" id="own-bugs" tabindex="-1"><h3>내 버그 제보</h3>${bugListHtml(t,guestBugs)}</section>`:''}${reportPanel(t)}</div></div>`;
 }
 
 /* ---------- developer ---------- */
@@ -346,8 +371,9 @@ const bar=(l,n,tot)=>`<div><span>${esc(l)}</span><div class="bar"><span style="w
 function summaryHtml(t){
   const f=filterBuild(t.feedbacks,ui.resultBuild[t.id]||'all');
   if(!f.length)return '<p class="muted" style="margin-top:8px">아직 제출된 응답이 없습니다.</p>';
+  const guestCount=f.filter(response=>response.anonymous).length;
   const linkedIds=[...new Set(f.flatMap(item=>item.bugIds||[]))],linked=S.bugs.filter(b=>linkedIds.includes(b.id)&&b.testId===t.id);
-  return `<p class="mono muted" style="margin:8px 0">${f.length}명 응답</p><div class="stack">${feedbackQuestions(t,f).map(({question:q,values:vals})=>{
+  return `<p class="mono muted" style="margin:8px 0">${f.length}명 응답${guestCount?` · ${guestCount}건 익명 제출`:''}</p><div class="stack">${feedbackQuestions(t,f).map(({question:q,values:vals})=>{
     let body;
     if(q.type==='scale'){
       const avg=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'-';
@@ -453,6 +479,7 @@ function devForm(){
         <p class="hint">신청 전에는 게임명, 팀, 장르, 플랫폼, 소요 시간, 한 줄 소개만 보입니다.</p>
         <div class="fields">
           <div class="field"><label for="f-vis">공개 범위</label><select id="f-vis">${Object.keys(VIS).map(k=>`<option value="${k}" ${k===curVis?'selected':''}>${VIS[k]}</option>`).join('')}</select><span class="hint" id="vis-desc">${VIS_DESC[curVis]}</span></div>
+          ${cloud?`<div class="field wide"><label class="check"><input type="checkbox" id="f-allow-guests" ${e?.allowGuests?'checked':''} ${curVis==='public'&&(e?.platform||PLATFORMS[0])==='WebGL'?'':'disabled'} aria-describedby="guest-setting-hint"><span>익명 테스트 허용</span></label><p class="hint" id="guest-setting-hint">공개 WebGL 게임에서만 선택할 수 있습니다. 로그인 없이 빌드에 접근하므로 공개해도 되는 링크를 사용해 주세요.</p></div>`:''}
           <div class="field" id="code-field" ${curVis==='invite'?'':'hidden'}><label for="f-code">초대 코드</label><input type="text" id="f-code" value="${v('code')}" maxlength="12" autocomplete="off"><span class="hint">영문과 숫자 4~12자</span></div>
           <div class="field wide"><label for="f-focus">이번 테스트에서 확인할 점</label><textarea id="f-focus" maxlength="600" placeholder="예: 튜토리얼 없이 조작을 이해할 수 있는지, 처음 막히는 구간이 어디인지 알고 싶어요.">${v('feedbackFocus')}</textarea><span class="hint">신청 전 카드와 상세에 공개됩니다. 10~600자로 구체적인 목표를 적어 주세요.</span></div><div class="field wide"><label for="f-teaser">공개 소개 (한 줄)</label><input type="text" id="f-teaser" value="${v('teaser')}" maxlength="80"><span class="hint">목록에 그대로 보입니다. 핵심 메커니즘은 적지 마세요.</span></div>
         </div></fieldset>
@@ -607,14 +634,14 @@ function renderAdmin(){
 /* ---------- render & events ---------- */
 function captureFeedbackDraft(){
  const form=$('form[data-form="feedback"]');if(!form)return;
- const test=byId(form.dataset.id);if(!test)return;
+ const test=detailTest(form.dataset.id);if(!test)return;
  const answers={};for(const q of test.survey){if(q.type==='text'){answers[q.id]=$('#a-'+q.id)?.value||'';}else{answers[q.id]=form.querySelector(`input[name="a-${q.id}"]:checked`)?.value||'';}}
  ui.feedbackDrafts[test.id]={answers,build:$('#feedback-build')?.value,problemChoice:form.querySelector('[name="problem-choice"]:checked')?.value||'',bugIds:selectedBugIds(form)};
 }
 function updateProblemGuidance(){const form=$('form[data-form="feedback"]');if(!form)return;const choice=form.querySelector('[name="problem-choice"]:checked')?.value;const links=$('#linked-bug-options'),newBug=$('#new-bug-guidance');if(links)links.hidden=choice!=='reported';if(newBug)newBug.hidden=choice!=='new';const shared=$('#shared-bug-options');if(shared)shared.hidden=choice!=='existing';form.querySelectorAll('[data-legacy-bug-field]').forEach(el=>{el.hidden=['reported','existing'].includes(choice)&&!el.querySelector('textarea').value;});}
 function restoreFeedbackDraft(){
  const form=$('form[data-form="feedback"]');if(!form)return;
- const test=byId(form.dataset.id),draft=ui.feedbackDrafts[test.id];if(!draft){updateProblemGuidance();return;}
+ const test=detailTest(form.dataset.id),draft=ui.feedbackDrafts[test.id];if(!draft){updateProblemGuidance();return;}
  if(draft.build&&$('#feedback-build'))$('#feedback-build').value=draft.build;const shared=$('#shared-bug-options');if(shared)shared.innerHTML=sharedBugOptionsHtml(test,bugSummaries(),$('#feedback-build').value);
  for(const q of test.survey){if(q.type==='text'){const el=$('#a-'+q.id);if(el)el.value=draft.answers[q.id]||'';}else form.querySelectorAll(`input[name="a-${q.id}"]`).forEach(el=>el.checked=el.value===String(draft.answers[q.id]||''));}
  form.querySelectorAll('[name="problem-choice"]').forEach(el=>el.checked=el.value===draft.problemChoice);
@@ -670,8 +697,10 @@ function render(capture=true){
 }
 function nav(page,sub,saved=false){
   if(!saved&&$('[data-form="dev"]')){void persistDeveloperDraft().then(ok=>{if(ok!==false)nav(page,sub,true);});return;}
+  captureFeedbackDraft();
   syncDraft();
   clearUploads();
+  ui.guest=null;
   ui.gallery=null;
   ui.publishedGame=null;
   ui.unresolvedBugGame=null;
@@ -701,6 +730,43 @@ function showNotificationTarget(notice){
  ui.detail=test.id;
  render(false);
  if(notice.type==='approval')($('#playtest-build-link')||$('#participation-next'))?.focus();
+}
+
+async function restoreGuest(test){
+ if(!guestAvailable(test)||!cloud.hasGuest(test.id))return;
+ const request={id:test.id,loading:true};
+ ui.guest=request;
+ render(false);
+ try{
+  const participation=await cloud.guest('view',test.id);
+  if(ui.guest===request&&ui.detail===test.id&&!cloud.user)ui.guest={id:test.id,participation};
+ }catch(error){
+  if(ui.guest!==request||ui.detail!==test.id)return;
+  ui.guest=null;
+  if(error.code!=='PT410')toast('익명 참여 상태를 확인하지 못했습니다. 다시 시도해 주세요.');
+ }
+ if(ui.detail===test.id)render(false);
+}
+
+async function guestCommand(action,testId,payload,form,errorNode){
+ const submit=form.querySelector('[type="submit"]');
+ ui.saving=true;submit.disabled=true;
+ try{
+  const participation=await cloud.guest(action,testId,payload);
+  if(ui.detail!==testId||cloud.user)return null;
+  ui.guest={id:testId,participation};
+  byId(testId).applicants=participation.applicants;
+  return participation;
+ }catch(error){
+  if(error.code==='PT410'||error.code==='PT409'){
+   captureFeedbackDraft();
+   ui.guest=null;
+   if(error.code==='PT409')await restoreGuest(byId(testId));
+   else render(false);
+   toast(error.message);
+  }else if(errorNode)errorNode.textContent=error.message;
+  return null;
+ }finally{ui.saving=false;submit.disabled=false;}
 }
 
 async function remoteCommand(action,payload){
@@ -858,8 +924,13 @@ listen(document,'click',async e=>{
   if(a==='tab-d'){if(cloud&&!cloud.user){cloud.requireUser();return;}if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.publishedGame=null;ui.unresolvedBugGame=null;ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
   if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;ui.logGame=null;return render()}
   if(a==='genre'){ui.genre=b.dataset.genre;return render()}
-  if(a==='open'){releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.gallery=null;ui.page='tester';ui.detail=id;ui.reporting=null;render();return top()}
-  if(a==='back'){ui.detail=null;ui.reporting=null;return render()}
+  if(a==='open'){
+    captureFeedbackDraft();releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.gallery=null;ui.guest=null;
+    ui.page='tester';ui.detail=id;ui.reporting=null;render(false);top();
+    await restoreGuest(byId(id));
+    return;
+  }
+  if(a==='back'){captureFeedbackDraft();ui.guest=null;ui.detail=null;ui.reporting=null;return render(false)}
   if(a==='report-open'){ui.reporting=id;return render()}
   if(a==='report-cancel'){ui.reporting=null;return render()}
   /* operator */
@@ -999,7 +1070,7 @@ listen(document,'change',e=>{
   if(e.target.id==='moderation-game-filter'){ui.logGame=e.target.value||null;render();$('#moderation-game-filter')?.focus();return;}
   if(e.target.dataset?.versionKind){const map=e.target.dataset.versionKind==='survey'?ui.resultBuild:ui.bugBuild;map[e.target.dataset.testId]=e.target.value;render(false);return;}
   if(e.target.id==='bug-build'){updateDuplicates();return;}
-  if(e.target.id==='feedback-build'){captureFeedbackDraft();const t=byId(e.target.closest('form').dataset.id);$('#shared-bug-options').innerHTML=sharedBugOptionsHtml(t,bugSummaries(),e.target.value);return;}
+  if(e.target.id==='feedback-build'){captureFeedbackDraft();const t=byId(e.target.closest('form').dataset.id),shared=$('#shared-bug-options');if(shared)shared.innerHTML=sharedBugOptionsHtml(t,bugSummaries(),e.target.value);return;}
   if(e.target.closest('[data-form="dev"]')&&e.target.type!=='file')queueDeveloperDraft();
   if(e.target.name==='problem-choice'){updateProblemGuidance();captureFeedbackDraft();if(e.target.value==='new')openBugFromSurvey();return;}
   if(e.target.name==='linked-bugs'){captureFeedbackDraft();return;}
@@ -1019,7 +1090,7 @@ listen(document,'change',e=>{
     if(c)c.hidden=e.target.value!=='invite';
     if(d)d.textContent=VIS_DESC[e.target.value]||'';
   }
-  if(e.target.name==='capacity-mode'||e.target.id==='f-other')updateDevSelectors();
+  if(e.target.name==='capacity-mode'||['f-other','f-vis','f-platform'].includes(e.target.id))updateDevSelectors();
   if(e.target.name==='f-genres')updateGenreSummary();
   if(e.target.classList&&e.target.classList.contains('q-type')){syncDraft();renderSurvey()}
 });
@@ -1027,7 +1098,9 @@ listen(document,'change',e=>{
 listen(document,'submit',async e=>{
   const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();
   if(f.dataset.form==='search'){ui.search=f.querySelector('input').value.trim();render();return;}
-  if(cloud&&['report','apply','feedback','bug','bug-status','dev'].includes(f.dataset.form)&&!cloud.requireUser()){toast('로그인이 필요합니다.');return;}
+  const guest=guestFor(f.dataset.id);
+  const guestWrite=guest&&['feedback','bug'].includes(f.dataset.form);
+  if(cloud&&!guestWrite&&['report','apply','feedback','bug','bug-status','dev'].includes(f.dataset.form)&&!cloud.requireUser()){toast('로그인이 필요합니다.');return;}
   if(f.dataset.form==='report'){
     if(cloud){if(await remoteCommand('report',{testId:f.dataset.id,reason:$('#rp-cat').value,detail:$('#rp-detail').value.trim()})){ui.reporting=null;render();toast('신고를 접수했습니다. 운영자가 확인합니다.');}return;}
     const t=byId(f.dataset.id),cat=$('#rp-cat').value,detail=$('#rp-detail').value.trim(),err=$('#rp-err');
@@ -1037,6 +1110,15 @@ listen(document,'submit',async e=>{
     return toast('신고를 접수했습니다. 운영자가 확인합니다.');
   }
   if(ui.saving)return;
+  if(f.dataset.form==='guest-join'){
+    const testId=f.dataset.id,err=$('#ap-err');
+    if(!guestAvailable(byId(testId)))return;
+    if(!$('#ap-agree').checked){err.textContent='이용 동의서에 동의해 주세요.';return;}
+    if(await guestCommand('join',testId,{agreed:true},f,err)){
+      render(false);$('#participation-next')?.focus();
+    }
+    return;
+  }
   if(['apply','feedback','bug'].includes(f.dataset.form)&&byId(f.dataset.id)?.owner==='me')return;
   if(f.dataset.form==='apply'){
     if(cloud){if(await remoteCommand('apply',{testId:f.dataset.id,agreed:$('#ap-agree').checked,code:$('#ap-code')?.value.trim().toUpperCase()||''})){render();$('#participation-next')?.focus();toast('신청을 저장했습니다.');}return;}
@@ -1059,10 +1141,19 @@ listen(document,'submit',async e=>{
   }
   if(f.dataset.form==='bug'){
     captureFeedbackDraft();
-    const t=byId(f.dataset.id),err=$('#bug-error'),application=S.mine[t?.id];
+    const t=byId(f.dataset.id),err=$('#bug-error'),application=guest?{status:guest.submitted?'done':'applied'}:S.mine[t?.id];
     if(!t||!['open','closed'].includes(t.status)||!application||!['applied','done'].includes(application.status)){err.textContent='참여가 승인된 테스트에서만 버그를 제보할 수 있습니다.';return;}
     const data={build:$('#bug-build').value,title:$('#bug-title').value.trim(),description:$('#bug-description').value.trim(),steps:$('#bug-steps').value.trim(),device:$('#bug-device').value.trim(),severity:$('#bug-severity').value};
     const validation=bugValidation(data);if(validation){err.textContent=validation;return;}
+    if(guest){
+      const result=await guestCommand('bug',t.id,{data},f,err);
+      if(result){
+        const draft=ui.feedbackDrafts[t.id];
+        if(draft&&result.newBugId){draft.problemChoice='reported';draft.bugIds=[...new Set([...draft.bugIds,result.newBugId])];}
+        render(false);$('#own-bugs')?.focus();toast('버그 제보를 저장했습니다. 개발자가 확인할 수 있습니다.');
+      }
+      return;
+    }
     ui.saving=true;const submit=f.querySelector('[type="submit"]');submit.disabled=true;
     const pending=[...ui.bugMedia],previous=clone(S);
     try{await saveMedia(pending);}catch{ui.saving=false;submit.disabled=false;err.textContent='첨부 파일을 저장하지 못했습니다. 저장 공간을 확인해 주세요.';return;}
@@ -1087,10 +1178,10 @@ listen(document,'submit',async e=>{
     render();toast('버그 처리 내용을 저장했습니다.');return;
   }
   if(f.dataset.form==='feedback'){
-    const t=byId(f.dataset.id),err=$('#fb-err'),answers={};
-    if(!t||S.mine[t.id]?.status!=='applied'){err.textContent='참여 중인 테스트에서만 설문을 제출할 수 있습니다.';return;}
+    const t=detailTest(f.dataset.id),err=$('#fb-err'),answers={};
+    if(!t||(guest?guest.submitted:S.mine[t.id]?.status!=='applied')){err.textContent='참여 중인 테스트에서만 설문을 제출할 수 있습니다.';return;}
     const issueChoice=f.querySelector('[name="problem-choice"]:checked')?.value||'',bugIds=selectedBugIds(f),build=$('#feedback-build').value;
-    const issueError=validateFeedbackIssue(issueChoice,bugIds,S.bugs,t.id,bugSummaries());if(issueError){err.textContent=issueError;if(issueChoice==='new')openBugFromSurvey();return;}
+    const issueError=validateFeedbackIssue(issueChoice,bugIds,guest?.bugs||S.bugs,t.id,guest?[]:bugSummaries());if(issueError){err.textContent=issueError;if(issueChoice==='new')openBugFromSurvey();return;}
     for(const q of t.survey){
       let val='';
       if(q.type==='text')val=($('#a-'+q.id).value||'').trim();
@@ -1098,7 +1189,12 @@ listen(document,'submit',async e=>{
       if(q.required&&val===''){err.textContent='필수 문항에 답해 주세요: '+q.label;return}
       if(val!=='')answers[q.id]=val;
     }
-    if(cloud){if(await remoteCommand('feedback',{testId:t.id,answers,build,issueStatus:issueChoice,bugIds:['reported','existing'].includes(issueChoice)?bugIds:[]})){delete ui.feedbackDrafts[t.id];render(false);$('#participation-next')?.focus();toast('설문을 제출했습니다.');}return;}
+    if(cloud){
+      const response={testId:t.id,answers,build,issueStatus:issueChoice,bugIds:['reported','existing'].includes(issueChoice)?bugIds:[]};
+      const submitted=guest?await guestCommand('feedback',t.id,response,f,err):await remoteCommand('feedback',response);
+      if(submitted){delete ui.feedbackDrafts[t.id];render(false);$('#participation-next')?.focus();toast('설문을 제출했습니다.');}
+      return;
+    }
     const previous=clone(S);
     t.feedbacks.push({answers,build,surveySnapshot:clone(t.survey),issueStatus:issueChoice,bugIds:['reported','existing'].includes(issueChoice)?bugIds:[]});
     S.mine[t.id]=Object.assign({},S.mine[t.id],{status:'done'});if(!save()){S=previous;return;}delete ui.feedbackDrafts[t.id];render(false);return toast('설문을 제출했습니다.');
@@ -1121,7 +1217,7 @@ listen(document,'submit',async e=>{
       err.textContent='기본 장르와 겹치지 않는 서로 다른 장르를 최대 5개, 각 24자까지 입력해 주세요.';return;
     }
     const d={title:g('f-title'),team:g('f-team'),genre:genres[0]||OTHER_GENRE,genres,customGenres,platform:g('f-platform'),build:g('f-build'),minutes:+g('f-min'),slots:$('#f-unlimited').checked?null:+g('f-slots'),
-      feedbackFocus:g('f-focus'),deadline:g('f-deadline'),vis:g('f-vis'),code:g('f-code').toUpperCase(),teaser:g('f-teaser'),link:g('f-link'),how:g('f-how')};
+      feedbackFocus:g('f-focus'),deadline:g('f-deadline'),vis:g('f-vis'),allowGuests:!!$('#f-allow-guests')?.checked,code:g('f-code').toUpperCase(),teaser:g('f-teaser'),link:g('f-link'),how:g('f-how')};
     if((!ui.edit||d.feedbackFocus)&& (d.feedbackFocus.length<10||d.feedbackFocus.length>600)){err.textContent='확인할 점은 10~600자로 입력해 주세요.';return;}
     const deadlineError=deadlineValidation(d.deadline,byId(ui.edit)?.createdDate||today(),byId(ui.edit)?.deadline);
     if(deadlineError){err.textContent=deadlineError;return;}
@@ -1175,7 +1271,7 @@ let disposeAccount;
 if(cloud){
  const footer=document.querySelector('footer p');if(footer)footer.textContent='IndieTest · 개발자와 플레이어가 함께 만드는 게임.';
  document.querySelector('footer [data-act="reset"]')?.remove();
- disposeAccount=cloud.mountAccount(async reset=>{if(reset){if(draftOwner===currentDraftOwner())await persistDeveloperDraft();draftOwner=currentDraftOwner();clearTimeout(draftTimer);ui.devFields=null;ui.savedDrafts=[];ui.draftReady=false;clearUploads();ui.feedbackDrafts={};ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';location.hash='#home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();ui.publishedGame=null;S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());await loadDeveloperDrafts();render();});
+ disposeAccount=cloud.mountAccount(async reset=>{if(reset){if(draftOwner===currentDraftOwner())await persistDeveloperDraft();draftOwner=currentDraftOwner();clearTimeout(draftTimer);ui.devFields=null;ui.savedDrafts=[];ui.draftReady=false;clearUploads();ui.feedbackDrafts={};ui.guest=null;ui.detail=null;ui.edit=null;ui.draft=null;ui.page='home';location.hash='#home';mediaHydrator.dispose();mediaHydrator=createMediaHydrator();ui.publishedGame=null;S=migrateFeatures({tests:[]});render();}S=migrateFeatures(await cloud.snapshot());await loadDeveloperDrafts();render();});
 }
 const h0=hashPage();if(h0)ui.page=h0;
 render();

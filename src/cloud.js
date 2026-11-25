@@ -17,6 +17,14 @@ export async function createCloud(env){
  const {data:{session},error}=await client.auth.getSession();if(error&&!callbackError)throw error;
  let user=session?.user||null,viewer={},providers={google:false,naver:false},authStatus=callbackError?authErrorMessage({code:'access_denied'}):'';
  if(callbackError){for(const name of ['error','error_code','error_description'])currentUrl.searchParams.delete(name);if(new URLSearchParams(currentUrl.hash.slice(1)).has('error'))currentUrl.hash='';history.replaceState(null,'',currentUrl.pathname+currentUrl.search+currentUrl.hash);}
+ const guestIds=new Map();
+ function guestId(testId){
+  if(guestIds.has(testId))return guestIds.get(testId);
+  try{
+   const id=localStorage.getItem('indietest-guest:'+testId);
+   return /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(id||'')?id:null;
+  }catch{return null;}
+ }
  const checked=result=>{if(result.error)throw result.error;return result.data;};
  const api={client,get user(){return user;},get canAdmin(){return !!viewer.admin;},adopt(state){viewer=state.viewer||{};return state;},
   async snapshot(){
@@ -32,6 +40,15 @@ export async function createCloud(env){
    const result=checked(response);if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);
   },
   async command(action,payload){if(!user)throw new Error('로그인이 필요합니다.');const identity=user.id;const result=checked(await client.rpc('pt_command',{action,payload}));if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);},
+  hasGuest(testId){return !!guestId(testId);},
+  async guest(action,testId,payload={}){
+   if(user)throw new Error('로그인한 계정으로 참여해 주세요.');
+   const result=checked(await client.rpc('pt_guest_playtest',{action,game_id:testId,participant_id:guestId(testId),payload}));
+   if(user)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');
+   guestIds.set(testId,result.participantId);
+   try{localStorage.setItem('indietest-guest:'+testId,result.participantId);}catch{}
+   return result;
+  },
   requireUser(){if(user)return true;const details=document.querySelector('#login-area .account-menu');if(details){details.open=true;document.getElementById('account-email')?.focus();}return false;},
   async deleteGame(testId){
    const identity=user?.id;

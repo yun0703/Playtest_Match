@@ -86,3 +86,47 @@ try{
   disposeSpotlight?.();
 }
 console.log('PASS randomized eligible spotlight and stable filters');
+
+
+const guestGame={...eligibleGames[0],id:'guest-game',allowGuests:true};
+const memberGame={...guestGame,id:'member-game',allowGuests:false};
+const survey=[{id:'goal',label:'How did the controls feel?',type:'text',required:true}];
+const participation={link:'https://example.com/guest-build',how:'Play the test build.',survey,playedBuild:'v1',bugs:[],applicants:1,submitted:false};
+const guestActions=[];
+const guestCloud={...cloud,hasGuest:()=>guestActions.includes('join'),requireUser(){throw Error('Guest flow invoked login');},
+ async guest(action,testId,payload){
+  if(testId!==guestGame.id)throw Error('Guest access used for a member-only game');
+  guestActions.push(action);
+  if(action==='join'&&payload.agreed!==true)throw Error('Consent was not sent');
+  if(action==='feedback'){
+   if(payload.answers.goal!=='The controls were clear.')throw Error('Guest feedback answer was lost');
+   participation.submitted=true;
+  }
+  return {...participation};
+ }
+};
+location.hash='#home';
+const disposeGuest=initialize({cloud:guestCloud,initialState:{tests:[guestGame,memberGame]}});
+const openGameDetail=id=>handlers.click({target:{closest:s=>s==='[data-act]'?{dataset:{act:'open',id}}:null}});
+const mainHtml=()=>elements.get('#main').innerHTML;
+await openGameDetail(memberGame.id);
+if(!mainHtml().includes('data-form="apply"')||mainHtml().includes('data-form="guest-join"'))throw Error('Member-only game exposed anonymous joining');
+await openGameDetail(guestGame.id);
+if(!mainHtml().includes('data-form="guest-join"')||mainHtml().includes(participation.link))throw Error('Guest build was visible before consent');
+const submitForm=(form)=>handlers.submit({target:{closest:()=>form},preventDefault(){}});
+const submit={disabled:false};
+elements.set('#ap-agree',{checked:true});
+elements.set('#ap-err',{textContent:''});
+await submitForm({dataset:{form:'guest-join',id:guestGame.id},querySelector:()=>submit});
+if(!mainHtml().includes(participation.link)||!mainHtml().includes('data-form="feedback"')
+   ||!mainHtml().includes('data-form="bug"')||mainHtml().includes('id="bug-file"'))throw Error('Guest play, survey or text-only bug form missing');
+elements.set('#a-goal',{value:'The controls were clear.'});
+elements.set('#feedback-build',{value:'v1'});
+elements.set('#fb-err',{textContent:''});
+await submitForm({dataset:{form:'feedback',id:guestGame.id},
+ querySelector:selector=>selector==='[type="submit"]'?submit:{value:'none'},querySelectorAll:()=>[]});
+if(!mainHtml().includes('설문을 제출했습니다')||mainHtml().includes('data-form="feedback"'))throw Error('Guest can still see the survey after submitting');
+await openGameDetail(guestGame.id);
+if(!mainHtml().includes('설문을 제출했습니다')||guestActions.join()!=='join,feedback,view')throw Error('Guest completion was not restored');
+disposeGuest();
+console.log('PASS opt-in guest consent, limited participation form, and survey completion restoration');
