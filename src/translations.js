@@ -195,7 +195,6 @@ export default {
   "내 게임의 첫 테스터를 찾아보세요.": "or find the first testers for your game.",
   "게임에 참여하고 플레이 경험을 전달하세요.": "Join playtests and share your experience.",
   "테스터를 모집하고 버그와 피드백을 모으세요.": "Recruit testers and collect bugs and feedback.",
-  "역할 선택 없이 두 기능을 모두 이용할 수 있습니다.": "Use both features without choosing a role.",
   "회원가입 연결을 확인해 주세요.": "Please check the sign-up connection.",
 
   "계정 설정": "Account settings",
@@ -213,7 +212,7 @@ export default {
   "새 비밀번호": "New password",
   "새 비밀번호 확인": "Confirm new password",
   "비밀번호 저장": "Save password",
-  "비밀번호는 8~128자로 입력해 주세요.": "Use a password of 8–128 characters.",
+  "비밀번호는 8자 이상, UTF-8 기준 72바이트 이하로 입력해 주세요.": "Use at least 8 characters and no more than 72 bytes in UTF-8.",
   "새 비밀번호가 일치하지 않습니다.": "The new passwords do not match.",
   "추가 인증 코드를 요청받았나요?": "Asked for an additional verification code?",
   "인증 코드 보내기": "Send verification code",

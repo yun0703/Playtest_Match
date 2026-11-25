@@ -29,6 +29,11 @@ assert.match(signup,/data-account-form="signup"/);
 assert.ok(!signup.includes('value="login"'));
 const invalid=new Map([['nickname','테스터'],['password','test-password'],['confirmation','different']]);
 assert.ok(signupValidation(invalid));invalid.set('confirmation','test-password');assert.equal(signupValidation(invalid),'');
+for(const [password,accepted] of [['a'.repeat(72),true],['a'.repeat(73),false],['한'.repeat(24),true],['한'.repeat(25),false]]){
+ invalid.set('password',password);
+ invalid.set('confirmation',password);
+ assert.equal(signupValidation(invalid)==='',accepted);
+}
 invalid.set('nickname','   ');assert.ok(signupValidation(invalid));
 assert.ok(!signupHtml(null,{},'', '<img onerror=evil>').includes('<img'));
 assert.ok(!signupHtml(null,{},'', 'test@example.com').includes('data-account-form'));

@@ -1,12 +1,14 @@
-export function passwordValidation(password,confirmation){
- if(typeof password!=='string'||password.length<8||password.length>128)return '비밀번호는 8~128자로 입력해 주세요.';
- if(password!==confirmation)return '새 비밀번호가 일치하지 않습니다.';
+export const PASSWORD_GUIDANCE='비밀번호는 8자 이상, UTF-8 기준 72바이트 이하로 입력해 주세요.';
+
+export function passwordValidation(password,confirmation,mismatch='새 비밀번호가 일치하지 않습니다.'){
+ if(typeof password!=='string'||[...password].length<8||new TextEncoder().encode(password).length>72)return PASSWORD_GUIDANCE;
+ if(password!==confirmation)return mismatch;
  return '';
 }
 export function nicknameValidation(name){return typeof name==='string'&&name.trim().length>=1&&name.trim().length<=40&&!/[\u0000-\u001f\u007f]/.test(name)?'':'닉네임은 공백만 제외한 1~40자로 입력해 주세요.';}
 export const hasPasswordLogin=user=>(user?.identities||[]).some(identity=>identity.provider==='email');
 export function accountTaskError(error){
- const allowed=['비밀번호는 8~128자로 입력해 주세요.','새 비밀번호가 일치하지 않습니다.','복구 링크를 다시 열거나 로그인해 주세요.','현재 비밀번호를 입력해 주세요.','계정이 변경되었습니다. 다시 시도해 주세요.','닉네임은 공백만 제외한 1~40자로 입력해 주세요.','올바른 이메일 주소를 입력해 주세요.','확인란에 탈퇴를 입력해 주세요.','탈퇴하려면 로그아웃 후 다시 로그인해 주세요. 최근 15분 이내 로그인이 필요합니다.','첨부파일을 모두 삭제하지 못했습니다. 탈퇴를 다시 시도해 주세요.'];
+ const allowed=[PASSWORD_GUIDANCE,'새 비밀번호가 일치하지 않습니다.','복구 링크를 다시 열거나 로그인해 주세요.','현재 비밀번호를 입력해 주세요.','계정이 변경되었습니다. 다시 시도해 주세요.','닉네임은 공백만 제외한 1~40자로 입력해 주세요.','올바른 이메일 주소를 입력해 주세요.','확인란에 탈퇴를 입력해 주세요.','탈퇴하려면 로그아웃 후 다시 로그인해 주세요. 최근 15분 이내 로그인이 필요합니다.','첨부파일을 모두 삭제하지 못했습니다. 탈퇴를 다시 시도해 주세요.'];
  return allowed.includes(error?.message)?error.message:'';
 }
 export function createAccountService(client,origin){

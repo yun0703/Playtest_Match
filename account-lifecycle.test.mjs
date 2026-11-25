@@ -3,6 +3,8 @@ import {createAccountService,passwordValidation,nicknameValidation,accountTaskEr
 import {accountHtml} from './src/account.js';
 import {accountDialogHtml} from './src/account-controls.js';
 assert.ok(passwordValidation('short','short'));assert.ok(passwordValidation('long password','wrong'));assert.equal(passwordValidation('long password','long password'),'');
+assert.equal(passwordValidation('🔑'.repeat(18),'🔑'.repeat(18)),'');
+assert.ok(passwordValidation('🔑'.repeat(19),'🔑'.repeat(19)));
 assert.ok(nicknameValidation('   '));assert.ok(nicknameValidation('x'.repeat(41)));assert.ok(nicknameValidation('a\nb'));assert.equal(nicknameValidation(' 새 이름 '),'');
 assert.equal(accountTaskError({message:'secret upstream stack'}),'');
 const user={id:'qa',email:'qa@example.com',identities:[{provider:'email'}]};
