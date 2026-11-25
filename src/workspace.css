@@ -160,3 +160,5 @@ fieldset.field {min-width:0}
 .managed-entry>summary>.b-pending {grid-column:3;grid-row:2}
 .managed-entry .game-disclosure {grid-column:4;grid-row:1}
 #published-notice {margin-bottom:12px}
+
+.notification-panel .approval-notice-link {color:var(--accent);font-weight:650}

@@ -131,7 +131,7 @@ function safeUrl(value){
 const byId=id=>S.tests.find(t=>t.id===id);
 const today=()=>seoulDate();
 const allNotifications=()=>[...deadlineNotifications(S),...S.notifications].slice(0,100);
-function renderNotifications(){const el=$('#notification-area');if(el){const open=el.querySelector('details')?.open;el.innerHTML=notificationsHtml(allNotifications(),S);if(open)el.querySelector('details').open=true;}}
+function renderNotifications(){const el=$('#notification-area');if(el){const open=el.querySelector('details')?.open;el.innerHTML=notificationsHtml(allNotifications(),S,{canRefresh:!!cloud?.user});if(open)el.querySelector('details').open=true;}}
 function clearUploads(){releaseStaged((ui.mediaDraft||[]).filter(x=>x.file));releaseStaged(ui.bugMedia);ui.mediaDraft=null;ui.bugMedia=[];}
 let draftTimer,draftRevision=0,draftPending=Promise.resolve(),draftOwner=cloud?.user?.id||(!cloud?'local':'');
 const DEV_FIELDS=['f-title','f-team','f-other-genres','f-platform','f-build','f-min','f-slots','f-deadline','f-vis','f-code','f-focus','f-teaser','f-link','f-how'];
@@ -267,7 +267,7 @@ function renderTester(){
   const genres=['전체',...GENRES.filter(g=>open.some(t=>matchesGenre(t,g))),OTHER_GENRE];
   const list=ui.tTab==='mine'?mineList:filteredTests(ui.tTab==='saved'?favorites:open);
   const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중'],['alerts','알림']]);
-  if(ui.tTab==='alerts')return workspace(side,notificationsHtml(allNotifications(),S,{page:true}));
+  if(ui.tTab==='alerts')return workspace(side,notificationsHtml(allNotifications(),S,{page:true,canRefresh:!!cloud?.user}));
   const chips=ui.tTab==='open'?`<div class="sub" aria-label="장르 필터">${genres.map(g=>`<button type="button" class="chip" data-act="genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}</button>`).join('')}</div>`:'';
   const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="participant-art">${gameArt(t)}</div><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
   const empty=ui.tTab==='saved'?'찜한 게임이 없습니다. 게임 카드의 하트를 눌러 모아보세요.':ui.tTab==='mine'?'아직 신청한 테스트가 없습니다. 모집 중 탭에서 플레이해 보고 싶은 게임을 골라 보세요.':'조건에 맞는 테스트가 없습니다.';
@@ -319,7 +319,7 @@ function renderDetail(t){
   }else if(st==='declined'){
     side=`<div class="panel"><h3>이번 테스트에는 참여할 수 없습니다</h3><p class="muted">개발자가 신청을 받지 않았습니다. 다른 테스트를 둘러보세요.</p></div>`;
   }else if(st==='applied'){
-    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>1. 빌드 열기</h3>${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(t.platform)} 빌드 받기</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
+    side=`<div class="panel" id="participation-next" tabindex="-1"><h3>1. 빌드 열기</h3>${url?`<a class="btn" id="playtest-build-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(t.platform)} 빌드 받기</a><p class="hint" data-no-translate>${esc(new URL(url).hostname)}</p>`:'<p class="err">빌드 링크 형식이 올바르지 않습니다.</p>'}
       <p class="hint">빌드는 새 탭에서 열립니다. 플레이를 마치면 이 탭으로 돌아와 아래 설문을 작성해 주세요.</p>
       <p class="mono muted">이용 동의 ${esc(m.agreedAt||'')} · 공유와 재배포는 금지됩니다.</p>
       <form data-form="feedback" data-id="${t.id}" novalidate>
@@ -576,6 +576,22 @@ function nav(page,sub,saved=false){
 function hashPage(){const h=(location.hash||'').slice(1);return PAGES.includes(h)?h:null}
 function top(){const m=$('#main');if(m&&m.scrollIntoView)m.scrollIntoView({block:'start'})}
 
+// Use the state returned by mark_read so an old approval never opens a
+// removed game or bypasses the user's current participation status.
+function showNotificationTarget(notice){
+ const test=byId(notice.testId);
+ if(!test||!visibleTo(test)){
+   render();
+   toast('이 테스트는 현재 열 수 없습니다.');
+   return;
+ }
+ const returnTab=ui.page==='tester'&&ui.tTab==='alerts'?'alerts':'mine';
+ nav('tester',returnTab,true);
+ ui.detail=test.id;
+ render(false);
+ if(notice.type==='approval')($('#playtest-build-link')||$('#participation-next'))?.focus();
+}
+
 async function remoteCommand(action,payload){
  if(!cloud.requireUser()){toast('로그인이 필요합니다.');return false;}
  const userId=cloud.user.id;ui.saving=true;try{const next=await cloud.command(action,payload);if(cloud.user?.id!==userId){S=migrateFeatures(await cloud.snapshot());render();return false;}S=migrateFeatures(next);return true;}catch(error){toast(error.message);return false;}finally{ui.saving=false;}
@@ -584,7 +600,12 @@ async function handleCloudClick(action,button,event){
  const id=button.dataset.id;
  if(action==='account-login'){cloud.requireUser();return true;}
  if(action==='reset'){toast('실서비스 데이터는 초기화할 수 없습니다.');return true;}
- if(action==='open-notification'){const notice=allNotifications().find(n=>n.id===id);if(notice&&await remoteCommand('mark_read',{ids:[id]})){nav('tester',ui.page==='tester'&&ui.tTab==='alerts'?'alerts':'mine');ui.detail=notice.testId;render();}return true;}
+ if(action==='open-notification'){
+  const notice=allNotifications().find(n=>n.id===id);
+  if(!notice||await persistDeveloperDraft()===false)return true;
+  if(await remoteCommand('mark_read',{ids:[id]}))showNotificationTarget(notice);
+  return true;
+ }
  const handlers={
   'start-play':()=>['start_play',{testId:id}],
   'toggle-close':()=>['toggle_close',{testId:id}],
@@ -609,13 +630,22 @@ listen(document,'click',async e=>{
   if(a==='show-own-bugs'){$('#own-bugs')?.focus();return;}
   if(a==='refresh-flow'&&cloud){
     const identity=cloud.user?.id;
+    const fromHeader=!!b.closest('#notification-area');
+    const fromInbox=!!b.closest('.notification-page');
     ui.saving=true;b.disabled=true;
     try{
       const snapshot=await cloud.snapshot();
       if(identity!==cloud.user?.id)return;
-      S=migrateFeatures(snapshot);
-      render();
-      ($('[data-act="refresh-flow"]')||$('#participation-next'))?.focus();
+      if(fromHeader){
+        S.notifications=snapshot.notifications||[];
+        S.readNotifications=snapshot.readNotifications||{};
+        renderNotifications();
+      }else{
+        S=migrateFeatures(snapshot);
+        render();
+      }
+      const source=fromHeader?'#notification-area ':fromInbox?'.notification-page ':'';
+      ($(source+'[data-act="refresh-flow"]')||$('#participation-next'))?.focus();
       toast('최신 상태를 확인했습니다.');
     }catch{toast('상태를 확인하지 못했습니다. 다시 시도해 주세요.');}
     finally{ui.saving=false;b.disabled=false;}
@@ -653,11 +683,26 @@ listen(document,'click',async e=>{
   if(a==='media-select'){ui.gallery=id;const t=byId(ui.detail);const el=$('#detail-gallery');if(t&&el){el.outerHTML=galleryHtml(t,id);mediaHydrator.hydrate($('#main'));}return;}
   if(a==='start-play'){const m=S.mine[id];if(m?.status==='applied'){m.startedAt=new Date().toISOString();m.playedBuild=byId(id).build;save();const el=$(`[data-progress-id="${id}"]`);if(el)el.outerHTML=progressHtml(byId(id),m);}return;}
   if(a==='read-notifications'){allNotifications().forEach(n=>S.readNotifications[n.id]=true);save();render();return;}
-  if(a==='open-notification'){const n=allNotifications().find(n=>n.id===id);if(n){S.readNotifications[id]=true;save();nav('tester',ui.page==='tester'&&ui.tTab==='alerts'?'alerts':'mine');ui.detail=n.testId;render();}return;}
+  if(a==='open-notification'){const n=allNotifications().find(n=>n.id===id);if(n&&await persistDeveloperDraft()!==false){S.readNotifications[id]=true;save();showNotificationTarget(n);}return;}
   if(a==='home-genre' ||a==='catalog-genre'){ui.genre=b.dataset.genre;render();return;}
   if(a==='feature'){ui.featured=id;render();return;}
   if(a==='clear-filters'){ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
-  if(a==='tab-t'){if(b.dataset.tab==='saved'&&cloud&&!cloud.requireUser())return;releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.tTab=b.dataset.tab;ui.detail=null;return render()}
+  if(a==='tab-t'){
+    if(b.dataset.tab==='saved'&&cloud&&!cloud.requireUser())return;
+    releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.tTab=b.dataset.tab;ui.detail=null;
+    render();
+    if(ui.tTab==='alerts'&&cloud?.user){
+      const previous=S,identity=cloud.user.id;
+      try{
+        const snapshot=await cloud.snapshot();
+        if(!ui.saving&&S===previous&&cloud.user?.id===identity&&ui.page==='tester'&&ui.tTab==='alerts'&&!ui.detail){
+          S=migrateFeatures(snapshot);
+          render(false);
+        }
+      }catch{toast('알림을 새로고침하지 못했습니다.');}
+    }
+    return;
+  }
   if(a==='tab-d'){if(cloud&&!cloud.user){cloud.requireUser();return;}if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.publishedGame=null;ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
   if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;return render()}
   if(a==='genre'){ui.genre=b.dataset.genre;return render()}

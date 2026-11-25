@@ -1,4 +1,10 @@
 export default {
+  "참여가 승인됐어요": "Your application was approved",
+  "알림 새로고침": "Refresh notifications",
+  "알림을 새로고침하지 못했습니다.": "Could not refresh notifications.",
+  "테스트 열기 →": "Open playtest →",
+  "이 테스트는 현재 열 수 없습니다.": "This playtest is currently unavailable.",
+
   "신청이 접수되었습니다": "Application received",
   "개발자가 승인하면 이 화면에서 빌드를 열 수 있습니다. 나중에는 테스터 메뉴의 ‘내 참여 현황’에서 이 테스트를 다시 열 수 있습니다.": "Once approved, you can open the build here. Reopen this test anytime from My participation in the Tester menu.",
   "승인 상태 확인": "Check approval status",
