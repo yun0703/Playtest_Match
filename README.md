@@ -1,4 +1,4 @@
-# PlayTest Match
+# IndieTest
 
 React로 만든 인디게임 플레이테스트 플랫폼입니다. Supabase Auth / PostgreSQL RPC / Storage를 사용하며 Vercel에서 정적 프론트엔드를 배포합니다.
 

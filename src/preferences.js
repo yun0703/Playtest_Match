@@ -85,7 +85,7 @@ export function mountPreferences(){
  function apply(){
   document.documentElement.dataset.theme=prefs.theme;
   document.documentElement.lang=prefs.language;
-  document.title=prefs.language==='en'?'PlayTest Match — Indie game playtests':'PlayTest Match — 인디게임 플레이테스트';
+  document.title=prefs.language==='en'?'IndieTest — Indie game playtests':'IndieTest — 인디게임 플레이테스트';
   document.getElementById('theme-select').value=prefs.theme;
   document.getElementById('language-select').value=prefs.language;
   localize();

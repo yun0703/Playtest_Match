@@ -55,7 +55,7 @@ cloud.user=null;
 await refreshAccount(true);
 if(location.hash!=='#home')throw Error('Signed-out route disagrees with the screen');
 if(elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Developer form survived sign-out');
-if(!elements.get('#main').innerHTML.includes('<h1>PlayTest Match</h1>'))throw Error('Signed-out page did not render');
+if(!elements.get('#main').innerHTML.includes('<h1>IndieTest</h1>'))throw Error('Signed-out page did not render');
 disposeCloud();
 console.log('PASS signed-in member publishing and account reset with empty private state');
 

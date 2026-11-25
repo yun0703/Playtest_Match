@@ -617,5 +617,5 @@ export default {
   "서비스 연결을 확인해 주세요": "Check the service connection",
   "다시 시도": "Try again",
   "로그인하면 테스트를 등록하고 신청자와 피드백을 관리할 수 있습니다.": "Sign in to create playtests and manage applications and feedback.",
-  "PlayTest Match · 개발자와 플레이어가 함께 만드는 게임.": "PlayTest Match · Games made better by developers and players together."
+  "IndieTest · 개발자와 플레이어가 함께 만드는 게임.": "IndieTest · Games made better by developers and players together."
 };
