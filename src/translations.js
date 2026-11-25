@@ -1,4 +1,11 @@
 export default {
+  "테스트 목표에 답하는 문항": "A question for your playtest objective",
+  "이번 테스트에서 확인할 점에 직접 답할 수 있는 질문을 하나 넣어 보세요.": "Add a question that directly addresses what you want to learn from this playtest.",
+  "경로를 쉽게 찾는지 확인하려면 “첫 배달 경로를 찾을 때 어디에서 막혔나요?”처럼 물어보세요.": "To check if a route is easy to find, ask “Where did you get stuck looking for the first delivery route?”",
+  "테스트 목표로 문항 추가": "Add a question from the objective",
+  "먼저 이번 테스트에서 확인할 점을 작성해 주세요.": "Enter your playtest objective first.",
+  "목표를 참고해 80자 이내의 질문을 작성해 주세요.": "Use your objective to write a question of up to 80 characters.",
+
   "처리 사유 (운영자에게만 표시됩니다)": "Reason (visible to operators only)",
   "이 게임의 처리 내역": "View this game’s moderation history",
   "게임별 처리 내역": "Moderation history by game",

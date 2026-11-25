@@ -371,7 +371,12 @@ function reqsHtml(t){
 }
 function surveyBuilderHtml(){
   const d=ui.draft;
-  return `<div class="stack">${d.map((q,i)=>`<div class="qrow" data-i="${i}">
+  return `<div class="survey-goal-guide">
+    <h3>테스트 목표에 답하는 문항</h3>
+    <p>이번 테스트에서 확인할 점에 직접 답할 수 있는 질문을 하나 넣어 보세요.</p>
+    <p class="hint">경로를 쉽게 찾는지 확인하려면 “첫 배달 경로를 찾을 때 어디에서 막혔나요?”처럼 물어보세요.</p>
+    <button class="btn ghost sm" type="button" data-act="q-add-goal" ${d.length>=MAXQ?'disabled':''}>테스트 목표로 문항 추가</button>
+  </div><div class="stack">${d.map((q,i)=>`<div class="qrow" data-i="${i}">
     <div class="qhead"><span class="qno">Q${i+1}</span>
       <select class="q-type" aria-label="질문 ${i+1} 유형">${Object.keys(QTYPE).map(k=>`<option value="${k}" ${k===q.type?'selected':''}>${QTYPE[k]}</option>`).join('')}</select>
       <label class="check small"><input type="checkbox" class="q-req" ${q.required?'checked':''}>필수</label>
@@ -957,6 +962,24 @@ listen(document,'click',async e=>{
     if(a==='option-remove'&&options.length>2)options.splice(+b.dataset.option,1);
     renderSurvey();
     if(a==='option-add')document.querySelectorAll(`.qrow[data-i="${b.dataset.i}"] .q-option`)[options.length-1]?.focus();
+    return;
+  }
+  if(a==='q-add-goal'){
+    const goal=$('#f-focus');
+    const label=goal?.value.trim().replace(/\s+/g,' ')||'';
+    if(!label){
+      goal?.focus();
+      toast('먼저 이번 테스트에서 확인할 점을 작성해 주세요.');
+      return;
+    }
+    syncDraft();
+    if(!ui.draft||ui.draft.length>=MAXQ)return;
+    const question=newQ('text');
+    question.label=label.length<=80?label:'';
+    ui.draft.push(question);
+    renderSurvey();
+    $(`#survey-builder .qrow[data-i="${ui.draft.length-1}"] .q-label`)?.focus();
+    if(!question.label)toast('목표를 참고해 80자 이내의 질문을 작성해 주세요.');
     return;
   }
   if(a==='q-add'){syncDraft();if(ui.draft.length<MAXQ)ui.draft.push(newQ('text'));return renderSurvey()}

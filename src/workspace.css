@@ -254,3 +254,8 @@ button.work-count:hover {background:var(--accent-soft);border-color:var(--accent
 .moderation-transition {font-size:13px;margin-block:5px}
 .moderation-note {white-space:pre-wrap;margin-top:8px}
 #moderation-game-filter {width:min(100%,380px)}
+
+
+.survey-goal-guide {margin:8px 0 16px;padding:12px 14px;border-left:3px solid var(--button);background:var(--surface-2);border-radius:0 10px 10px 0}
+.survey-goal-guide p {margin-top:5px}
+.survey-goal-guide .btn {margin-top:9px}

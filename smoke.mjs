@@ -43,6 +43,14 @@ if(!elements.get('#main').innerHTML.includes('data-form="dev"'))throw Error('Mem
 for(const mark of ['id="f-other"','id="f-other-genres"','id="f-limited"','id="f-unlimited"','data-act="capacity-step"']){
   if(!elements.get('#main').innerHTML.includes(mark))throw Error('Missing registration control: '+mark);
 }
+const goal='첫 배달 경로를 찾을 때 어디에서 막혔나요?';
+let focusedQuestion=false;
+elements.set('#f-focus',{value:goal});
+elements.set('#survey-builder',{innerHTML:'',querySelectorAll:()=>[]});
+elements.set('#survey-builder .qrow[data-i="3"] .q-label',{focus(){focusedQuestion=true;}});
+if(!elements.get('#main').innerHTML.includes('data-act="q-add-goal"'))throw Error('Goal question guidance missing');
+await handlers.click({target:{closest:s=>s==='[data-act]'?{dataset:{act:'q-add-goal'}}:null}});
+if(!elements.get('#survey-builder').innerHTML.includes(`value="${goal}"`)||!focusedQuestion)throw Error('Goal question was not editable after adding it');
 cloud.user=null;
 await refreshAccount(true);
 if(location.hash!=='#home')throw Error('Signed-out route disagrees with the screen');
