@@ -3,7 +3,7 @@ import {accountDialogHtml} from './account-controls.js';
 import {passwordValidation,PASSWORD_GUIDANCE} from './account-service.js';
 export const MEMBER_GUIDANCE='하나의 계정으로 테스트 참여와 게임 등록을 모두 이용할 수 있습니다.';
 export const SOCIAL_PROVIDERS={google:{provider:'google',label:'Google로 계속하기'},naver:{provider:'custom:naver',label:'네이버로 계속하기'}};
-export function socialAvailabilityNote(providers){return (providers.google||providers.naver)&&providers.testMode!==false?'소셜 로그인은 현재 등록된 테스트 계정으로 운영 중입니다.':'';}
+export function socialAvailabilityNote(providers){return providers.naver&&providers.testMode!==false?'네이버 로그인은 현재 등록된 테스트 계정만 이용할 수 있습니다. 다른 계정은 Google 또는 이메일로 계속해 주세요.':'';}
 export function memberName(user,viewer={}){const m=user?.user_metadata||{};return viewer.nickname||m.nickname||m.preferred_username||m.full_name||m.name||'플레이어';}
 export function authErrorMessage(error){
  const messages={weak_password:'비밀번호가 보안 기준에 맞지 않습니다. 더 긴 비밀번호를 사용해 주세요.',same_password:'기존과 다른 비밀번호를 입력해 주세요.',reauthentication_needed:'추가 인증 코드를 요청한 뒤 입력해 주세요.',reauthentication_not_valid:'인증 코드를 확인하거나 다시 요청해 주세요.',otp_expired:'복구 링크가 만료되었거나 사용되었습니다. 새 복구 메일을 요청해 주세요.',over_request_rate_limit:'요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',email_address_invalid:'인증 메일을 받을 수 있는 올바른 이메일 주소를 입력해 주세요.',email_address_not_authorized:'현재 이메일 가입 발송 설정이 준비 중입니다. 소셜 로그인을 이용하거나 운영자에게 문의해 주세요.',over_email_send_rate_limit:'인증 메일 발송 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.',invalid_credentials:'이메일 또는 비밀번호가 올바르지 않습니다.',email_not_confirmed:'이메일 인증을 완료한 뒤 로그인해 주세요.',access_denied:'소셜 로그인이 취소되었습니다. 다시 시도할 수 있습니다.',provider_disabled:'이 로그인 서비스는 아직 연결 준비 중입니다.'};
