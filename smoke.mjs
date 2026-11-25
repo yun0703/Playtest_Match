@@ -7,7 +7,8 @@ globalThis.location={hash:''};
 globalThis.localStorage={getItem(){return null},setItem(){}};
 for(const target of [document,window])target.addEventListener=(type,fn)=>{handlers[type]=fn};
 const dispose=initialize();
-for(const page of ['home','tester','developer','admin']){location.hash='#'+page;handlers.hashchange();if(!elements.get('#main').innerHTML.length)throw Error('Empty '+page);console.log('PASS render '+page);}
+for(const page of ['home','tester','developer','admin','guide']){location.hash='#'+page;handlers.hashchange();if(!elements.get('#main').innerHTML.length)throw Error('Empty '+page);console.log('PASS render '+page);}
+if(!elements.get('#main').innerHTML.includes('id="guide-title"')||!elements.get('#main').innerHTML.includes('개발자로 모집하기'))throw Error('Usage guide missing');
 location.hash='#developer';handlers.hashchange();
 const openRequest={dataset:{section:'requests'}},restoredRequest={dataset:{section:'requests'},open:false};
 const openGame={dataset:{game:'t1'},open:true,querySelectorAll:()=>[openRequest]};
@@ -26,6 +27,7 @@ const id=[...html.matchAll(/data-act="open" data-id="([^"]+)"/g)].map(match=>mat
 const button={dataset:{act:'open',id},disabled:false};
 handlers.click({target:{closest:s=>s==='[data-act]'?button:null}});
 if(!elements.get('#main').innerHTML.includes('data-form="apply"'))throw Error('Detail missing application');
+if(!elements.get('#main').innerHTML.includes('data-act="jump-participation"'))throw Error('Mobile detail missing its participation shortcut');
 const ownButton={dataset:{act:'open',id:'t1'},disabled:false};
 handlers.click({target:{closest:s=>s==='[data-act]'?ownButton:null}});
 if(elements.get('#main').innerHTML.includes('data-form="apply"'))throw Error('Owner can apply to their own test');

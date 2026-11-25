@@ -12,7 +12,7 @@ const listen=(target,type,handler)=>target.addEventListener(type,handler,{signal
 const KEY='playtest-match-project-v1';
 
 const PLATFORMS=['WebGL','Windows','Android'];
-const PAGES=['home','tester','developer','admin'];
+const PAGES=['home','tester','developer','admin','guide'];
 const MENU=[['home','홈'],['tester','테스터'],['developer','개발자'],['admin','운영자']];
 const TSTATUS={open:'모집 중',closed:'모집 종료',hidden:'숨김',appeal:'재공개 검토 중'};
 const TBADGE={open:'approved',closed:'vis',hidden:'rejected',appeal:'pending'};
@@ -229,7 +229,7 @@ function filteredTests(list){
  return result;
 }
 function catalogTools(){return `<div class="catalog-tools"><form data-form="search" class="search-form"><label class="sr-only" for="game-search">게임 검색</label><input id="game-search" type="search" name="search" value="${esc(ui.search)}" placeholder="게임, 개발팀 검색" autocomplete="off"><button type="submit" aria-label="검색">⌕</button></form><div class="catalog-selects"><label class="sr-only" for="platform-filter">플랫폼</label><select id="platform-filter"><option value="all" ${ui.platform==='all'?'selected':''}>모든 플랫폼</option>${PLATFORMS.map(p=>`<option value="${p}" ${ui.platform===p?'selected':''}>${p}</option>`).join('')}</select><label class="sr-only" for="sort-filter">정렬</label><select id="sort-filter">${[['default','등록 순'],['new','최근 등록 순'],['short','짧은 플레이 시간 순'],['seats','남은 자리 많은 순']].map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${l}</option>`).join('')}</select></div></div>`;}
-function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}<span>${tests.filter(t=>matchesGenre(t,g)).length}</span></button>`;return GENRES.slice(0,8).map(button).join('')+`<details class="more-genres" ${[...GENRES.slice(8),OTHER_GENRE].includes(ui.genre)?'open':''}><summary>장르 더 보기</summary><div>${GENRES.slice(8).map(button).join('')}</div></details>${button(OTHER_GENRE)}`;}
+function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}<span>${tests.filter(t=>matchesGenre(t,g)).length}</span></button>`;return `<div class="home-genre-strip">${GENRES.slice(0,8).map(button).join('')}</div>`+`<details class="more-genres" ${[...GENRES.slice(8),OTHER_GENRE].includes(ui.genre)?'open':''}><summary>장르 더 보기</summary><div>${GENRES.slice(8).map(button).join('')}</div></details>${button(OTHER_GENRE)}`;}
 function workspace(side,body){
  return `<div class="store-layout"><aside class="store-sidebar">${side}</aside><div class="store-content">${body}</div></div>`;
 }
@@ -332,7 +332,8 @@ function renderDetail(t){
     side=`<div class="panel" id="participation-next" tabindex="-1"><h3>설문을 제출했습니다</h3><p>개발자가 결과를 확인할 수 있습니다. 제보한 버그의 상태와 개발자 답변은 ‘내 버그 제보’에서 확인하세요.</p><div class="actions"><button class="btn ghost" type="button" data-act="show-own-bugs">내 버그 제보 보기</button><button class="text-link" type="button" data-act="tab-t" data-tab="mine">내 참여 현황</button></div></div>`;
   }
   const cancellation=cancellationHtml(t,S.mine[t.id]);
-  return `<button class="back" type="button" data-act="back">← 목록으로</button><div class="cols"><div class="stack">${info}</div><div class="col-side">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel" id="own-bugs" tabindex="-1"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
+  const mobileTask=own?'':st==='applied'?'빌드 및 피드백':st==='done'?'제출 결과 보기':m?'신청 상태 보기':'참여하기';
+  return `<div class="detail-navigation"><button class="back" type="button" data-act="back">← 목록으로</button>${mobileTask?`<button class="btn ghost mobile-task" type="button" data-act="jump-participation">${mobileTask}</button>`:''}</div><div class="cols"><div class="stack">${info}</div><div class="col-side" id="participation-actions" tabindex="-1">${side}${cancellation}${bugFormHtml(t,m)}${m&&['applied','done'].includes(m.status)?`<section class="panel" id="own-bugs" tabindex="-1"><h3>내 버그 제보</h3>${bugListHtml(t,S.bugs)}</section>`:''}${reportPanel(t)}</div></div>`;
 }
 
 /* ---------- developer ---------- */
@@ -573,6 +574,30 @@ function restoreFeedbackDraft(){
  form.querySelectorAll('[name="linked-bugs"]').forEach(el=>el.checked=draft.bugIds.includes(el.value));updateProblemGuidance();
 }
 function openBugFromSurvey(){const panel=$('.bug-report-panel');if(panel){panel.open=true;panel.scrollIntoView({block:'start',behavior:'smooth'});$('#bug-title')?.focus({preventScroll:true});}}
+function renderGuide(){
+ const testerSteps=[
+  '홈에서 장르를 고르거나 게임과 개발팀 이름을 검색하세요.',
+  '게임 상세에서 테스트 목표와 마감일을 확인하고 참여를 신청하세요.',
+  '승인제 테스트는 ‘테스터 → 알림’에서 승인 소식을 확인할 수 있습니다. 알림을 열면 빌드 버튼으로 이동합니다.',
+  '플레이를 마치면 참여 화면으로 돌아와 설문을 제출하세요. 발견한 문제는 버그로 제보하고 설문에 연결할 수 있습니다.'
+ ];
+ const developerSteps=[
+  '‘개발자 → 게임 등록’에서 게임 소개, 테스트 목표, 빌드 링크, 모집 조건과 설문을 작성하세요.',
+  '‘내 게임 관리’에서 승인 대기 신청을 처리하고, 새 설문과 미해결 버그를 확인하세요.',
+  '설문 결과에서 개발자의 질문과 응답을 함께 보고, 필요하면 빌드별로 필터링하거나 CSV로 내려받으세요.',
+  '버그의 처리 상태나 답변을 저장하면 제보한 테스터가 알림에서 확인할 수 있습니다.'
+ ];
+ const steps=items=>`<ol>${items.map(step=>`<li>${step}</li>`).join('')}</ol>`;
+ return `<section class="usage-guide" aria-labelledby="guide-title">
+   <h1 id="guide-title" tabindex="-1">사용법</h1>
+   <p>한 계정으로 게임 테스트에 참여하고, 내 게임의 테스터도 모집할 수 있습니다.</p>
+   <div class="guide-columns">
+     <section class="panel"><h2>테스터로 참여하기</h2>${steps(testerSteps)}<a class="btn" href="#home" data-nav="home">게임 둘러보기</a></section>
+     <section class="panel"><h2>개발자로 모집하기</h2>${steps(developerSteps)}<a class="btn" href="#developer" data-nav="developer">개발자 화면 열기</a></section>
+   </div>
+   <p class="hint">신청 내역과 찜한 게임은 테스터 메뉴에서, 화면 테마와 언어는 상단 메뉴의 설정에서 바꿀 수 있습니다.</p>
+ </section>`;
+}
 function render(capture=true){
  const expanded=new Map();
  for(const game of document.querySelectorAll?.('.managed-entry')||[]){
@@ -582,7 +607,7 @@ function render(capture=true){
   renderMenu();
   const p=ui.page;
   $('#main').dataset.page=p;
-  $('#main').innerHTML=p==='home'?renderHome():p==='tester'?renderTester():p==='developer'?renderDeveloper():(!cloud||cloud.canAdmin)?renderAdmin():'<p class="notice">운영자 권한이 필요합니다.</p>';
+  $('#main').innerHTML=p==='home'?renderHome():p==='tester'?renderTester():p==='developer'?renderDeveloper():p==='guide'?renderGuide():(!cloud||cloud.canAdmin)?renderAdmin():'<p class="notice">운영자 권한이 필요합니다.</p>';
   for(const game of document.querySelectorAll?.('.managed-entry')||[]){
     const sections=expanded.get(game.dataset.game);
     if(!expanded.has(game.dataset.game)&&ui.publishedGame===game.dataset.game)game.open=true;
@@ -609,7 +634,7 @@ function nav(page,sub,saved=false){
   if(ui.page==='developer')ui.dTab=sub==='new'?'mine':sub||'mine';
   if(ui.page==='admin')ui.aTab=sub||'reports';
   try{if(location.hash!=='#'+ui.page)location.hash=ui.page}catch(e){}
-  render(false);window.scrollTo(0,0);if(ui.page==='developer'&&sub==='new')void startDeveloperEditor();
+  render(false);window.scrollTo(0,0);if(ui.page==='guide')$('#guide-title')?.focus();if(ui.page==='developer'&&sub==='new')void startDeveloperEditor();
 }
 function hashPage(){const h=(location.hash||'').slice(1);return PAGES.includes(h)?h:null}
 function top(){const m=$('#main');if(m&&m.scrollIntoView)m.scrollIntoView({block:'start'})}
@@ -665,6 +690,7 @@ listen(document,'click',async e=>{
   if(n){e.preventDefault();return nav(n.dataset.nav,n.dataset.sub)}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
   const a=b.dataset.act,id=b.dataset.id;
+  if(a==='jump-participation'){$('#participation-actions')?.focus();return;}
   if(a==='show-own-bugs'){$('#own-bugs')?.focus();return;}
   if(a==='refresh-flow'&&cloud){
     const identity=cloud.user?.id;
