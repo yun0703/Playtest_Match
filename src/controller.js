@@ -247,11 +247,14 @@ function catalogRow(t){
 }
 function renderHome(){
  const tests=S.tests.filter(t=>recruitmentOpen(t));
- const featured=tests.find(t=>t.id===ui.featured)||tests[0];
+ const featured=tests.find(t=>t.id===ui.featured)||tests[Math.floor(Math.random()*tests.length)];
+ ui.featured=featured?.id??null;
+ const featuredChoices=tests.slice(0,4);
+ if(featured&&!featuredChoices.includes(featured))featuredChoices[featuredChoices.length-1]=featured;
  const list=filteredTests(tests);
  const side=`<h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임</button><button class="side-link" data-act="show-favorites">찜한 게임</button><h3>장르</h3>${homeGenresHtml(tests)}`;
  const hero=featured?`<div><p class="genre-label">${gameGenreHtml(featured)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>PlayTest Match</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
- const picks=tests.length>1?`<div class="feature-links">${tests.slice(0,4).map(t=>`<button data-act="feature" data-id="${t.id}" aria-pressed="${featured.id===t.id}" data-no-translate>${esc(t.title)}</button>`).join('')}</div>`:'';
+ const picks=tests.length>1?`<div class="feature-links">${featuredChoices.map(t=>`<button data-act="feature" data-id="${t.id}" aria-pressed="${featured.id===t.id}" data-no-translate>${esc(t.title)}</button>`).join('')}</div>`:'';
  return workspace(side,`<section class="spotlight" aria-label="인디게임 플레이테스트">${hero}</section>${picks}<section class="recruit-section"><div class="section-heading"><h2>모집 중인 테스트</h2><button class="text-link" data-act="clear-filters">필터 초기화</button></div>${catalogTools()}${list.length?list.map(catalogRow).join(''):`<div class="empty">${tests.length?'검색 조건에 맞는 테스트가 없습니다.':'현재 모집 중인 테스트가 없습니다.'}</div>`}</section>`);
 }
 
@@ -667,6 +670,7 @@ function nav(page,sub,saved=false){
   ui.gallery=null;
   ui.publishedGame=null;
   ui.unresolvedBugGame=null;
+  if(page==='home'&&ui.page!=='home')ui.featured=null;
   ui.page=PAGES.includes(page)?page:'home';
   ui.detail=null;ui.reporting=null;ui.hiding=null;ui.edit=null;ui.draft=null;ui.devFields=null;ui.draftStatus='';
   if(ui.page==='tester')ui.tTab=sub||'mine';

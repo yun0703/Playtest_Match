@@ -51,3 +51,30 @@ if(!elements.get('#main').innerHTML.includes('<h1>PlayTest Match</h1>'))throw Er
 disposeCloud();
 console.log('PASS signed-in member publishing and account reset with empty private state');
 
+
+
+// The spotlight draws from every eligible game and stays stable on filter changes.
+const now=new Date();
+const validDeadline=new Date(now.getTime()+86400000).toISOString().slice(0,10);
+const expiredDeadline=new Date(now.getTime()-172800000).toISOString().slice(0,10);
+const eligibleGames=Array.from({length:5},(_,i)=>({id:`featured-${i}`,title:`Featured ${i}`,status:'open',vis:'public',slots:5,applicants:0,genre:'퍼즐',platform:'WebGL',deadline:validDeadline}));
+const tests=[...eligibleGames,{...eligibleGames[0],id:'expired',deadline:expiredDeadline},{...eligibleGames[0],id:'closed',status:'closed'}];
+location.hash='#home';
+const originalRandom=Math.random;
+let disposeSpotlight;
+try{
+  Math.random=()=>0.99;
+  disposeSpotlight=initialize({cloud,initialState:{tests}});
+  const spotlight=()=>elements.get('#main').innerHTML;
+  if(!spotlight().includes('data-id="featured-4" aria-pressed="true"'))throw Error('The spotlight must include eligible games outside the first four');
+  Math.random=()=>0;
+  await handlers.click({target:{closest:s=>s==='[data-act]'?{dataset:{act:'clear-filters'}}:null}});
+  if(!spotlight().includes('data-id="featured-4" aria-pressed="true"'))throw Error('The spotlight changed during a filter update');
+  location.hash='#tester';handlers.hashchange();
+  location.hash='#home';handlers.hashchange();
+  if(!spotlight().includes('data-id="featured-0" aria-pressed="true"'))throw Error('The spotlight was not selected again on return to Home');
+}finally{
+  Math.random=originalRandom;
+  disposeSpotlight?.();
+}
+console.log('PASS randomized eligible spotlight and stable filters');
