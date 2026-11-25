@@ -1,4 +1,17 @@
 export default {
+  "처리 사유 (운영자에게만 표시됩니다)": "Reason (visible to operators only)",
+  "이 게임의 처리 내역": "View this game’s moderation history",
+  "게임별 처리 내역": "Moderation history by game",
+  "모든 게임": "All games",
+  "처리 내역이 없습니다.": "No moderation history.",
+  "자동 숨김": "Automatically hidden",
+  "담당자 미기록": "Operator not recorded",
+  "시스템": "System",
+  "사유가 기록되지 않았습니다.": "No reason was recorded.",
+  "처리 사유를 4~4000자로 입력해 주세요.": "Enter a reason of 4–4000 characters.",
+  "처리 내역을 저장했습니다.": "Moderation action recorded.",
+  "신고 3건 누적으로 임시 숨김 처리되었습니다.": "Temporarily hidden after three open reports.",
+
   "사용법": "How to use",
   "빌드 및 피드백": "Build and feedback",
   "제출 결과 보기": "View submission",

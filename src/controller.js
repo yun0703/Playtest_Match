@@ -118,7 +118,7 @@ function save(){if(cloud)throw new Error('서버 모드에서 로컬 변경은 �
 
 let S=migrateFeatures(cloud?initialState:load());
 let mediaHydrator=createMediaHydrator();
-const ui={publishedGame:null,unresolvedBugGame:null,resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
+const ui={publishedGame:null,logGame:null,unresolvedBugGame:null,resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function safeUrl(value){
@@ -192,7 +192,9 @@ const adminCount=()=>reportedIds().length+appeals().length;
 const visibleTo=t=>t.status==='open'||t.owner==='me'||(t.status==='closed'&&(S.mine[t.id]||S.favorites.includes(t.id)));
 
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2800)}
-function logAdd(t,action,note){S.log.unshift({date:today(),title:t.title,action,note:note||''})}
+function logAdd(t,action,note,beforeStatus,actor='운영자'){
+  S.log.unshift({testId:t.id,date:new Date().toISOString(),title:t.title,action,note,actor,beforeStatus,afterStatus:t.status});
+}
 
 /* ---------- menu ---------- */
 function renderMenu(){
@@ -530,9 +532,46 @@ function testInfo(t){
   return `<div class="row"><div class="stack" style="gap:4px"><h3 data-no-translate>${esc(t.title)}</h3><p class="muted">${esc(t.team)} · ${gameGenreHtml(t)} · ${esc(t.platform)} · <span class="mono">${esc(t.build)}</span></p></div><span class="pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
     <p data-no-translate>${esc(t.teaser)}</p><dl class="facts"><dt>LINK</dt><dd class="mono">${esc(t.link)}</dd><dt>HOW</dt><dd>${esc(t.how)}</dd></dl>`;
 }
-function hideBox(t){
-  return `<div class="field"><label for="hd-${t.id}">숨김 사유 (개발자에게 표시됩니다)</label><textarea id="hd-${t.id}" placeholder="무엇이 문제인지, 어떻게 고치면 되는지 적어 주세요."></textarea><p class="err" id="hd-err" role="alert"></p></div>
-    <div class="actions"><button class="btn danger" type="button" data-act="hide-confirm" data-id="${t.id}">숨김 처리</button><button class="btn ghost" type="button" data-act="hide-cancel">취소</button></div>`;
+const moderationLabels={dismiss:'신고 기각',hide:'숨김 처리',restore:'재공개',auto_hide:'자동 숨김'};
+function moderationControls(t,actions){
+  const pending=ui.hiding;
+  if(pending?.id===t.id){
+    const action=pending.action;
+    return `<div class="field"><label for="moderation-reason">${action==='hide'?'숨김 사유 (개발자에게 표시됩니다)':'처리 사유 (운영자에게만 표시됩니다)'}</label>
+      <textarea id="moderation-reason" minlength="4" maxlength="4000" required aria-describedby="moderation-error"></textarea>
+      <p class="err" id="moderation-error" role="alert"></p></div>
+      <div class="actions"><button class="btn ${action==='hide'?'danger':''}" type="button" data-act="moderation-confirm" data-id="${t.id}">${moderationLabels[action]}</button><button class="btn ghost" type="button" data-act="moderation-cancel">취소</button></div>`;
+  }
+  return `<div class="actions">
+    ${actions.map(([action,label])=>`<button class="btn ${action==='hide'?'danger':action==='dismiss'?'ghost':''}" type="button" data-act="moderation-open" data-operation="${action}" data-id="${t.id}">${label}</button>`).join('')}
+    <button class="btn ghost" type="button" data-act="game-moderation-history" data-id="${t.id}">이 게임의 처리 내역</button>
+  </div>`;
+}
+function moderationHistory(){
+  const gameKey=record=>record.testId?`id:${record.testId}`:`title:${record.title}`;
+  const games=new Map(S.log.map(record=>[gameKey(record),record.title]));
+  if(ui.logGame?.startsWith('id:')){
+    const game=byId(ui.logGame.slice(3));
+    if(game&&!games.has(ui.logGame))games.set(ui.logGame,game.title);
+  }
+  const filter=games.has(ui.logGame)?ui.logGame:null;
+  const history=filter?S.log.filter(record=>gameKey(record)===filter):S.log;
+  return `<section class="panel moderation-history">
+    <div class="field"><label for="moderation-game-filter">게임별 처리 내역</label>
+      <select id="moderation-game-filter"><option value="">모든 게임</option>
+        ${[...games].map(([key,title])=>`<option value="${esc(key)}" ${filter===key?'selected':''} data-no-translate>${esc(title)}</option>`).join('')}
+      </select>
+    </div>
+    ${history.length?`<ul>${history.map(record=>{
+      const date=record.date||'';
+      const time=date.includes('T')?new Date(date).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})+' KST':date;
+      const state=record.beforeStatus&&record.afterStatus?`<p class="moderation-transition"><span>${TSTATUS[record.beforeStatus]||''}</span> → <span>${TSTATUS[record.afterStatus]||''}</span></p>`:'';
+      return `<li><div class="row"><strong data-no-translate>${esc(record.title)}</strong>
+        <span class="badge b-vis">${esc(moderationLabels[record.action]||record.action)}</span></div>
+        <p class="moderation-meta"><span ${record.actor&&record.actor!=='시스템'?'data-no-translate':''}>${esc(record.actor||'담당자 미기록')}</span><time datetime="${esc(date)}">${esc(time)}</time></p>
+        ${state}<p class="moderation-note" ${record.note&&record.action!=='auto_hide'?'data-no-translate':''}>${esc(record.note||'사유가 기록되지 않았습니다.')}</p></li>`;
+    }).join('')}</ul>`:'<p class="empty">처리 내역이 없습니다.</p>'}
+  </section>`;
 }
 function renderAdmin(){
   const rIds=reportedIds(),ap=appeals();
@@ -546,13 +585,13 @@ function renderAdmin(){
       const t=byId(id),rs=openReports().filter(r=>r.testId===id);
       return `<article class="panel"><div class="row"><span class="badge b-rejected">신고 ${rs.length}건</span></div>${testInfo(t)}
         <div class="stack">${rs.map(r=>`<div class="rep"><span class="mono">${esc(r.cat)} · ${esc(r.by)} · ${esc(r.date)}</span><span>${esc(r.detail||'(내용 없음)')}</span></div>`).join('')}</div>
-        ${ui.hiding===id?hideBox(t):`<div class="actions"><button class="btn danger" type="button" data-act="hide-open" data-id="${id}">숨김 처리</button><button class="btn ghost" type="button" data-act="dismiss" data-id="${id}">신고 기각</button></div>`}</article>`;
+        ${moderationControls(t,[['hide','숨김 처리'],['dismiss','신고 기각']])}</article>`;
     }).join('')}</div>`:'<div class="empty">확인할 신고가 없습니다.</div>';
   }else if(ui.aTab==='appeals'){
     body=ap.length?`<div class="stack">${ap.map(t=>`<article class="panel">${testInfo(t)}<p class="reason">이전 숨김 사유: ${esc(t.reason||'')}</p>
-      ${ui.hiding===t.id?hideBox(t):`<div class="actions"><button class="btn" type="button" data-act="restore" data-id="${t.id}">재공개</button><button class="btn danger" type="button" data-act="hide-open" data-id="${t.id}">숨김 유지</button></div>`}</article>`).join('')}</div>`:'<div class="empty">대기 중인 재공개 요청이 없습니다.</div>';
+      ${moderationControls(t,[['restore','재공개'],['hide','숨김 유지']])}</article>`).join('')}</div>`:'<div class="empty">대기 중인 재공개 요청이 없습니다.</div>';
   }else{
-    body=`<div class="panel">${S.log.length?S.log.map(l=>`<div class="logrow"><span><strong>${esc(l.title)}</strong> <span class="muted">${esc(l.note)}</span></span><span class="pair"><span class="badge b-vis">${esc(l.action)}</span><span class="mono muted">${esc(l.date)}</span></span></div>`).join(''):'<p class="muted">아직 없습니다.</p>'}</div>`;
+    body=moderationHistory();
   }
   return `<div class="head"><h2>운영자</h2></div><p class="notice">테스트는 등록 즉시 공개되며, 운영자는 접수된 신고와 재공개 요청만 처리합니다.</p>${tabs}${body}`;
 }
@@ -674,9 +713,6 @@ async function handleCloudClick(action,button,event){
   'toggle-close':()=>['toggle_close',{testId:id}],
   'req-approve':()=>['review_application',{testId:id,testerId:button.dataset.req==='me'?cloud.user?.id:button.dataset.req,decision:'approve'}],
   'req-decline':()=>['review_application',{testId:id,testerId:button.dataset.req==='me'?cloud.user?.id:button.dataset.req,decision:'decline'}],
-  'dismiss':()=>['dismiss',{testId:id}],
-  'restore':()=>['restore',{testId:id}],
-  'hide-confirm':()=>['hide',{testId:id,note:$('#hd-'+id).value.trim()}],
   'read-notifications':()=>['mark_read',{ids:allNotifications().map(n=>n.id)}]
  };
  if(!handlers[action])return false;event.preventDefault();const [command,payload]=handlers[action]();if(await remoteCommand(command,payload)){ui.hiding=null;render();}return true;
@@ -811,27 +847,51 @@ listen(document,'click',async e=>{
     return;
   }
   if(a==='tab-d'){if(cloud&&!cloud.user){cloud.requireUser();return;}if(b.dataset.tab==='new')return startDeveloperEditor(ui.edit);if(await persistDeveloperDraft()===false)return;syncDraft();clearUploads();ui.publishedGame=null;ui.unresolvedBugGame=null;ui.dTab=b.dataset.tab;ui.edit=null;ui.draft=null;ui.devFields=null;if(ui.dTab==='drafts')await loadDeveloperDrafts();return render(false)}
-  if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;return render()}
+  if(a==='tab-a'){ui.aTab=b.dataset.tab;ui.hiding=null;ui.logGame=null;return render()}
   if(a==='genre'){ui.genre=b.dataset.genre;return render()}
   if(a==='open'){releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.gallery=null;ui.page='tester';ui.detail=id;ui.reporting=null;render();return top()}
   if(a==='back'){ui.detail=null;ui.reporting=null;return render()}
   if(a==='report-open'){ui.reporting=id;return render()}
   if(a==='report-cancel'){ui.reporting=null;return render()}
   /* operator */
-  if(a==='dismiss'){
-    const t=byId(id),n=S.reports.filter(r=>r.testId===id&&r.status==='open');
-    n.forEach(r=>r.status='dismissed');logAdd(t,'신고 기각',`신고 ${n.length}건, 정책 위반 아님`);save();render();return toast('신고를 기각했습니다.');
+  if(a==='game-moderation-history'){
+    ui.aTab='log';ui.logGame=`id:${id}`;ui.hiding=null;
+    render();$('#moderation-game-filter')?.focus();return;
   }
-  if(a==='hide-open'){ui.hiding=id;return render()}
-  if(a==='hide-cancel'){ui.hiding=null;return render()}
-  if(a==='hide-confirm'){
-    const r=($('#hd-'+id).value||'').trim();
-    if(r.length<4){$('#hd-err').textContent='숨김 사유를 4자 이상 입력해 주세요.';return}
-    const t=byId(id),n=S.reports.filter(x=>x.testId===id&&x.status==='open');
-    t.status='hidden';t.reason=r;n.forEach(x=>x.status='actioned');ui.hiding=null;
-    logAdd(t,'숨김 처리',n.length?`신고 ${n.length}건 확인`:'재공개 요청 반려');save();render();return toast('숨김 처리했습니다. 개발자에게 사유가 표시됩니다.');
+  if(a==='moderation-open'){
+    ui.hiding={id,action:b.dataset.operation};
+    render();$('#moderation-reason')?.focus();return;
   }
-  if(a==='restore'){const t=byId(id);t.status='open';delete t.reason;logAdd(t,'재공개','수정 내용 확인');save();render();return toast(`'${t.title}'을 다시 공개했습니다.`)}
+  if(a==='moderation-cancel'){ui.hiding=null;return render();}
+  if(a==='moderation-confirm'){
+    const action=ui.hiding?.id===id?ui.hiding.action:null,t=byId(id);
+    if(!t||!['dismiss','hide','restore'].includes(action))return;
+    const note=$('#moderation-reason').value.trim();
+    if(note.length<4||note.length>4000){
+      $('#moderation-error').textContent='처리 사유를 4~4000자로 입력해 주세요.';
+      $('#moderation-reason').focus();
+      return;
+    }
+    if(cloud){
+      if(!await remoteCommand(action,{testId:id,note}))return;
+    }else{
+      const previous=clone(S),before=t.status;
+      const reports=openReports().filter(report=>report.testId===id);
+      if(action==='hide'){
+        if(['open','closed'].includes(t.status))t.priorStatus=t.status;
+        t.status='hidden';t.hiddenBy='admin';t.reason=note;
+        reports.forEach(report=>{report.status='actioned';});
+      }else if(action==='restore'||t.hiddenBy==='auto'){
+        t.status=t.priorStatus||'open';delete t.reason;delete t.hiddenBy;
+      }
+      if(action==='dismiss')reports.forEach(report=>{report.status='dismissed';});
+      logAdd(t,action,note,before);
+      if(!save()){S=previous;return;}
+    }
+    ui.hiding=null;ui.aTab='log';ui.logGame=`id:${id}`;
+    render();$('#moderation-game-filter')?.focus();
+    return toast('처리 내역을 저장했습니다.');
+  }
   /* developer */
   if(a==='delete-game'){
     const t=byId(id);
@@ -909,6 +969,7 @@ listen(document,'click',async e=>{
 
 listen(document,'input',e=>{if(e.target.id==='bug-title')updateDuplicates();if(e.target.closest('[data-form="dev"]')&&e.target.type!=='file')queueDeveloperDraft();});
 listen(document,'change',e=>{
+  if(e.target.id==='moderation-game-filter'){ui.logGame=e.target.value||null;render();$('#moderation-game-filter')?.focus();return;}
   if(e.target.dataset?.versionKind){const map=e.target.dataset.versionKind==='survey'?ui.resultBuild:ui.bugBuild;map[e.target.dataset.testId]=e.target.value;render(false);return;}
   if(e.target.id==='bug-build'){updateDuplicates();return;}
   if(e.target.id==='feedback-build'){captureFeedbackDraft();const t=byId(e.target.closest('form').dataset.id);$('#shared-bug-options').innerHTML=sharedBugOptionsHtml(t,bugSummaries(),e.target.value);return;}

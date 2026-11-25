@@ -245,3 +245,12 @@ button.work-count:hover {background:var(--accent-soft);border-color:var(--accent
  .guide-columns {grid-template-columns:minmax(0,1fr);gap:12px;margin-block:16px}
  .guide-columns .panel {padding:16px}
 }
+
+
+.moderation-history ul {list-style:none;padding:0;margin:0}
+.moderation-history li {padding:14px 0;border-top:1px solid var(--line)}
+.moderation-history li strong,.moderation-note {overflow-wrap:anywhere}
+.moderation-meta {display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--ink-2);font-size:13px;margin-block:5px}
+.moderation-transition {font-size:13px;margin-block:5px}
+.moderation-note {white-space:pre-wrap;margin-top:8px}
+#moderation-game-filter {width:min(100%,380px)}
