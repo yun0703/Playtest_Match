@@ -41,6 +41,10 @@ declare
  old_insert text=$old$    insert into pt_guest_participants(test_id,created_at,expires_at,played_build)
      values(game_id,stamp,stamp+interval '2 hours',game.doc->>'build') returning * into guest;$old$;
 begin
+ -- Functions created from the dashboard SQL editor on Windows keep CRLF line
+ -- endings; normalize so the multi-line anchors below match either form.
+ command_sql=replace(command_sql,chr(13)||chr(10),chr(10));
+ guest_sql=replace(guest_sql,chr(13)||chr(10),chr(10));
  if position(old_format in command_sql)=0 or position(old_check in command_sql)=0
     or position(old_slots in guest_sql)=0 or position(old_rate in guest_sql)=0
     or position(old_insert in guest_sql)=0 then
