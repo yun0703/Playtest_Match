@@ -14,7 +14,7 @@ declare
  save_data jsonb=jsonb_build_object(
   'title','Guest QA','team','Fixture','platform','WebGL','genre','퍼즐',
   'teaser','A synthetic public playtest','feedbackFocus','Check whether instructions are clear.',
-  'build','v1','minutes',10,'vis','public','slots',2,
+  'build','v1','minutes',10,'vis','public','slots',3,
   'deadline',((now() at time zone 'Asia/Seoul')::date+1)::text,
   'link','https://example.com/game','how','Open the test build.',
   'survey','[{"id":"goal","label":"Was it clear?","type":"scale","required":true}]'::jsonb,
@@ -61,20 +61,22 @@ begin
  end;
  result=pt_guest_playtest('join',game_id,null,'{"agreed":true}');
  other_guest=(result->>'participantId')::uuid;
+ -- Anonymous participants may hold at most half of the places (2 of 3).
+ begin
+  perform pt_guest_playtest('join',game_id,null,'{"agreed":true}');
+  raise exception 'Anonymous participation exceeded its share' using errcode='XX000';
+ exception when sqlstate 'PT429' then null;
+ end;
+ perform set_config('request.jwt.claim.sub',member_id::text,true);
+ perform pt_command('apply',jsonb_build_object('testId',game_id,'agreed',true));
+ perform set_config('request.jwt.claim.sub','',true);
  begin
   perform pt_guest_playtest('join',game_id,null,'{"agreed":true}');
   raise exception 'Anonymous participation exceeded capacity' using errcode='XX000';
  exception when sqlstate 'P0001' then null;
  end;
- perform set_config('request.jwt.claim.sub',member_id::text,true);
- begin
-  perform pt_command('apply',jsonb_build_object('testId',game_id,'agreed',true));
-  raise exception 'Member enrollment ignored guest capacity' using errcode='XX000';
- exception when sqlstate 'P0001' then null;
- end;
- perform set_config('request.jwt.claim.sub','',true);
  update pt_guest_participants set expires_at=now()-interval '1 second' where id=other_guest;
- if pt_recruitment_count(game_id)<>1 then raise exception 'Expired session did not release its seat'; end if;
+ if pt_recruitment_count(game_id)<>2 then raise exception 'Expired session did not release its seat'; end if;
 
  begin
   perform pt_guest_playtest('bug',game_id,guest_id,jsonb_set(bug_payload,'{data,attachments}','[{"id":"external"}]'));

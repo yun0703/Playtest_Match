@@ -39,7 +39,7 @@ export async function createCloud(env){
    }
    const result=checked(response);if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);
   },
-  async command(action,payload){if(!user)throw new Error('로그인이 필요합니다.');const identity=user.id;const result=checked(await client.rpc('pt_command',{action,payload}));if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');return api.adopt(result);},
+  async command(action,payload){if(!user)throw new Error('로그인이 필요합니다.');const identity=user.id;const result=checked(await client.rpc('pt_command',{action,payload}));if(identity!==user?.id)throw new Error('계정이 변경되었습니다. 다시 시도해 주세요.');if(typeof result?.commandError==='string')throw new Error(result.commandError);return api.adopt(result);},
   hasGuest(testId){return !!guestId(testId);},
   async guest(action,testId,payload={}){
    if(user)throw new Error('로그인한 계정으로 참여해 주세요.');

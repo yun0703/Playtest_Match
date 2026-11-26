@@ -64,7 +64,7 @@ function seed(){return{
      {answers:{q1:4,q2:'적당함',q3:'두 번째 시도에 이해했어요.',q4:'스테이지 3에서 블록이 벽에 끼는 현상이 있어요.'}},
      {answers:{q1:5,q2:'적당함',q3:'바로 이해했습니다. 규칙이 단순해요.'}},
      {answers:{q1:3,q2:'어려움',q3:'조금 헷갈렸어요.',q4:'되돌리기 버튼이 눈에 띄지 않아요.'}}]},
-   {id:'t2',owner:'other',status:'open',vis:'invite',code:'HARBOR',title:'Hollow Harbor',team:'1인 개발 해나',genre:'로그라이크',platform:'Windows',build:'v0.2.0',minutes:30,slots:10,applicants:7,
+   {id:'t2',owner:'other',status:'open',vis:'invite',code:'HARBOR26',title:'Hollow Harbor',team:'1인 개발 해나',genre:'로그라이크',platform:'Windows',build:'v0.2.0',minutes:30,slots:10,applicants:7,
     teaser:'짧은 항해마다 지도가 바뀌는 로그라이크',
     link:'https://example.com/hollow-harbor',how:'zip을 받아 실행한 뒤 첫 번째 보스까지 진행해 주세요. 사망해도 계속 시도해도 됩니다.',
     survey:[
@@ -121,6 +121,7 @@ let mediaHydrator=createMediaHydrator();
 const ui={guest:null,publishedGame:null,logGame:null,unresolvedBugGame:null,resultBuild:{},bugBuild:{},devFields:null,draftDirty:false,savedDrafts:[],draftStatus:'',draftDelete:null,draftReady:false,cancelApplication:null,feedbackDrafts:{},mediaDraft:null,bugMedia:[],saving:false,gallery:null,search:'',platform:'all',sort:'default',featured:null,page:'home',tTab:'mine',genre:'전체',detail:null,reporting:null,dTab:'mine',edit:null,draft:null,aTab:'reports',hiding:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function inviteCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>chars[b%chars.length]).join('');}
 function safeUrl(value){
   if(typeof value!=='string'||value.length>2048||!/^https:\/\//i.test(value)||/[\s\\\x00-\x1f\x7f]/.test(value))return '';
   try{
@@ -480,7 +481,7 @@ function devForm(){
         <div class="fields">
           <div class="field"><label for="f-vis">공개 범위</label><select id="f-vis">${Object.keys(VIS).map(k=>`<option value="${k}" ${k===curVis?'selected':''}>${VIS[k]}</option>`).join('')}</select><span class="hint" id="vis-desc">${VIS_DESC[curVis]}</span></div>
           ${cloud?`<div class="field wide"><label class="check"><input type="checkbox" id="f-allow-guests" ${e?.allowGuests?'checked':''} ${curVis==='public'&&(e?.platform||PLATFORMS[0])==='WebGL'?'':'disabled'} aria-describedby="guest-setting-hint"><span>익명 테스트 허용</span></label><p class="hint" id="guest-setting-hint">공개 WebGL 게임에서만 선택할 수 있습니다. 로그인 없이 빌드에 접근하므로 공개해도 되는 링크를 사용해 주세요.</p></div>`:''}
-          <div class="field" id="code-field" ${curVis==='invite'?'':'hidden'}><label for="f-code">초대 코드</label><input type="text" id="f-code" value="${v('code')}" maxlength="12" autocomplete="off"><span class="hint">영문과 숫자 4~12자</span></div>
+          <div class="field" id="code-field" ${curVis==='invite'?'':'hidden'}><label for="f-code">초대 코드</label><input type="text" id="f-code" value="${v('code')}" maxlength="12" autocomplete="off"><span class="hint">영문과 숫자 8~12자. 비워 두면 자동으로 만들어집니다.</span></div>
           <div class="field wide"><label for="f-focus">이번 테스트에서 확인할 점</label><textarea id="f-focus" maxlength="600" placeholder="예: 튜토리얼 없이 조작을 이해할 수 있는지, 처음 막히는 구간이 어디인지 알고 싶어요.">${v('feedbackFocus')}</textarea><span class="hint">신청 전 카드와 상세에 공개됩니다. 10~600자로 구체적인 목표를 적어 주세요.</span></div><div class="field wide"><label for="f-teaser">공개 소개 (한 줄)</label><input type="text" id="f-teaser" value="${v('teaser')}" maxlength="80"><span class="hint">목록에 그대로 보입니다. 핵심 메커니즘은 적지 마세요.</span></div>
         </div></fieldset>
       <fieldset class="group"><legend>참여자에게만 공개</legend><div class="fields">
@@ -1088,6 +1089,7 @@ listen(document,'change',e=>{
   if(e.target.id==='f-vis'){
     const c=$('#code-field'),d=$('#vis-desc');
     if(c)c.hidden=e.target.value!=='invite';
+    const codeInput=$('#f-code');if(e.target.value==='invite'&&codeInput&&!codeInput.value.trim())codeInput.value=inviteCode();
     if(d)d.textContent=VIS_DESC[e.target.value]||'';
   }
   if(e.target.name==='capacity-mode'||['f-other','f-vis','f-platform'].includes(e.target.id))updateDevSelectors();
@@ -1224,7 +1226,7 @@ listen(document,'submit',async e=>{
     if(!d.build||d.build.length>16){err.textContent='빌드 버전은 1~16자로 입력해 주세요.';return;}
     if(!d.title||!d.team){err.textContent='게임 이름과 팀 이름을 입력해 주세요.';return}
     if(d.teaser.length<8){err.textContent='공개 소개를 8자 이상 적어 주세요.';return}
-    if(d.vis==='invite'){if(!/^[A-Z0-9]{4,12}$/.test(d.code)){err.textContent='초대 코드는 영문과 숫자 4~12자로 입력해 주세요.';return}}else{d.code=''}
+    if(d.vis==='invite'){if(!d.code)d.code=inviteCode();if(!/^[A-Z0-9]{8,12}$/.test(d.code)){err.textContent='초대 코드는 영문과 숫자 8~12자로 입력해 주세요.';return}}else{d.code=''}
     d.link=safeUrl(d.link);
     if(!d.link){err.textContent='사용자 이름이나 비밀번호가 없는 유효한 HTTPS 빌드 링크를 입력해 주세요.';return}
     if(d.how.length<10){err.textContent='플레이 방법을 10자 이상 적어 주세요.';return}
