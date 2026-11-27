@@ -5,7 +5,7 @@ import {surveyCsv,bugsCsv,downloadCsv} from './result-export.js';
 import {dateAfterDays,seoulDate,deadlineTime,deadlineState,deadlineNotifications,migrateFeatures,bugValidation,validateFeedbackIssue,isLegacyBugQuestion,BUG_STATUSES,unlimitedCapacity,capacityFull,remainingCapacity,capacityValidation,maximumDeadline,deadlineValidation,recruitmentOpen} from './playtest-features.js';
 import {validateMedia,stageMedia,saveMedia,removeMedia,mediaMetadata,releaseStaged,createMediaHydrator} from './media-store.js';
 import {fileView,mediaEditor,galleryHtml,deadlineHtml,progressHtml,bugFormHtml,bugListHtml,notificationsHtml,focusHtml,problemChoiceHtml,playedBuildHtml,sharedBugOptionsHtml,duplicateBugHtml} from './feature-views.js';
-export function initialize({cloud=null,initialState=null}={}){
+export function initialize({cloud=null,initialState=null,homeGenres=true,homeEdition}={}){
 const controller = new AbortController();
 const listen=(target,type,handler)=>target.addEventListener(type,handler,{signal:controller.signal});
 
@@ -244,8 +244,8 @@ function gameCard(t){
  const m=S.mine[t.id],full=t.status!=='open'||capacityFull(t)||deadlineState(t.deadline)==='overdue';
  return `<article class="card game-card"><button class="cover-button" type="button" data-act="open" data-id="${t.id}" aria-label="${esc(t.title)} 테스트 살펴보기">${gameArt(t)}</button><div class="card-body"><div class="row"><span class="genre-label">${gameGenreHtml(t)}</span>${visBadge(t.vis)}</div>${favoriteButton(t)}<h3 data-no-translate>${esc(t.title)}</h3><p class="team" data-no-translate>${esc(t.team)}</p><p class="teaser" data-no-translate>${esc(t.teaser)}</p>${focusHtml(t,true)}<div class="card-meta"><span>${esc(t.platform)}</span><span>◷ ${t.minutes}분</span></div><div class="foot">${deadlineHtml(t)}${slotsHtml(t)}<button class="btn ghost card-join" type="button" data-act="open" data-id="${t.id}">${m?MINE_LABEL[m.status]:full?'모집 마감':'테스트 참여하기'} <span>→</span></button></div></div></article>`;
 }
-function filteredTests(list){
- let result=list.filter(t=>matchesGenre(t,ui.genre)&&(ui.platform==='all'||t.platform===ui.platform)&&(!ui.search||[t.title,t.team,t.teaser,...Object.values(gameGenreSelection(t)).flat(),t.feedbackFocus].join(' ').toLocaleLowerCase().includes(ui.search.toLocaleLowerCase())));
+function filteredTests(list,genre=ui.genre){
+ let result=list.filter(t=>matchesGenre(t,genre)&&(ui.platform==='all'||t.platform===ui.platform)&&(!ui.search||[t.title,t.team,t.teaser,...Object.values(gameGenreSelection(t)).flat(),t.feedbackFocus].join(' ').toLocaleLowerCase().includes(ui.search.toLocaleLowerCase())));
  if(ui.sort==='short')result.sort((a,b)=>a.minutes-b.minutes);
  if(ui.sort==='seats')result.sort((a,b)=>(remainingCapacity(b)-remainingCapacity(a))||0);
  if(ui.sort==='new')result.reverse();
@@ -254,7 +254,7 @@ function filteredTests(list){
 function catalogTools(){return `<div class="catalog-tools"><form data-form="search" class="search-form"><label class="sr-only" for="game-search">게임 검색</label><input id="game-search" type="search" name="search" value="${esc(ui.search)}" placeholder="게임, 개발팀 검색" autocomplete="off"><button type="submit" aria-label="검색">⌕</button></form><div class="catalog-selects"><label class="sr-only" for="platform-filter">플랫폼</label><select id="platform-filter"><option value="all" ${ui.platform==='all'?'selected':''}>모든 플랫폼</option>${PLATFORMS.map(p=>`<option value="${p}" ${ui.platform===p?'selected':''}>${p}</option>`).join('')}</select><label class="sr-only" for="sort-filter">정렬</label><select id="sort-filter">${[['default','등록 순'],['new','최근 등록 순'],['short','짧은 플레이 시간 순'],['seats','남은 자리 많은 순']].map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${l}</option>`).join('')}</select></div></div>`;}
 function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.genre===g?'active':''}" type="button" data-act="catalog-genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}<span>${tests.filter(t=>matchesGenre(t,g)).length}</span></button>`;return `<div class="home-genre-strip">${GENRES.slice(0,8).map(button).join('')}</div>`+`<details class="more-genres" ${[...GENRES.slice(8),OTHER_GENRE].includes(ui.genre)?'open':''}><summary>장르 더 보기</summary><div>${GENRES.slice(8).map(button).join('')}</div></details>${button(OTHER_GENRE)}`;}
 function workspace(side,body){
- return `<div class="store-layout"><aside class="store-sidebar">${side}</aside><div class="store-content">${body}</div></div>`;
+ return `<div class="store-layout">${side?`<aside class="store-sidebar">${side}</aside>`:''}<div class="store-content">${body}</div></div>`;
 }
 function islandArt(){return '<img class="island-art" src="/assets/playtest-island.jpg" alt="">';}
 function sectionNav(label,action,selected,items){
@@ -268,15 +268,24 @@ function catalogRow(t){
 }
 function renderHome(){
  const tests=S.tests.filter(t=>recruitmentOpen(t));
+ const edition=homeEdition?.({
+   recruiting:tests,
+   published:S.tests.filter(t=>t.status==='open'||t.status==='closed'),
+   games:filteredTests(tests,'전체'),
+   gameArt,favoriteButton,gameGenreHtml,catalogTools
+ });
+ if(edition)return edition;
  const featured=tests.find(t=>t.id===ui.featured)||tests[Math.floor(Math.random()*tests.length)];
  ui.featured=featured?.id??null;
  const featuredChoices=tests.slice(0,4);
  if(featured&&!featuredChoices.includes(featured))featuredChoices[featuredChoices.length-1]=featured;
- const list=filteredTests(tests);
- const side=`<h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임</button><button class="side-link" data-act="show-favorites">찜한 게임</button><h3>장르</h3>${homeGenresHtml(tests)}`;
+ const list=filteredTests(tests,homeGenres?ui.genre:'전체');
+ const side=homeGenres?`<h2>게임 둘러보기</h2><button class="side-link ${ui.genre==='전체'?'active':''}" data-act="catalog-genre" data-genre="전체">전체 게임</button><button class="side-link" data-act="show-favorites">찜한 게임</button><h3>장르</h3>${homeGenresHtml(tests)}`:'';
+ const resetFilters='<button class="text-link" data-act="clear-filters">필터 초기화</button>';
+ const actions=homeGenres?resetFilters:`<div class="catalog-shortcuts"><a class="btn ghost" href="#tester" data-nav="tester" data-sub="open">장르별로 보기</a><button class="btn ghost" type="button" data-act="show-favorites">찜한 게임</button>${resetFilters}</div>`;
  const hero=featured?`<div><p class="genre-label">${gameGenreHtml(featured)} · ${esc(featured.platform)}</p><h1 data-no-translate>${esc(featured.title)}</h1>${featureQuestion(featured)}<div class="actions"><button class="btn" data-act="open" data-id="${featured.id}">테스트 살펴보기 →</button>${deadlineHtml(featured)}</div></div><div class="hero-artwork">${gameArt(featured)}</div>`:`<div><h1>IndieTest</h1><p>개발 중인 게임을 먼저 만나고, 피드백을 남겨주세요.</p><a class="btn" href="#developer" data-nav="developer" data-sub="new">테스트 등록하기 →</a></div>${islandArt()}`;
  const picks=tests.length>1?`<div class="feature-links">${featuredChoices.map(t=>`<button data-act="feature" data-id="${t.id}" aria-pressed="${featured.id===t.id}" data-no-translate>${esc(t.title)}</button>`).join('')}</div>`:'';
- return workspace(side,`<section class="spotlight" aria-label="인디게임 플레이테스트">${hero}</section>${picks}<section class="recruit-section"><div class="section-heading"><h2>모집 중인 테스트</h2><button class="text-link" data-act="clear-filters">필터 초기화</button></div>${catalogTools()}${list.length?list.map(catalogRow).join(''):`<div class="empty">${tests.length?'검색 조건에 맞는 테스트가 없습니다.':'현재 모집 중인 테스트가 없습니다.'}</div>`}</section>`);
+ return workspace(side,`<section class="spotlight" aria-label="인디게임 플레이테스트">${hero}</section>${picks}<section class="recruit-section"><div class="section-heading"><h2>모집 중인 테스트</h2>${actions}</div>${catalogTools()}${list.length?list.map(catalogRow).join(''):`<div class="empty">${tests.length?'검색 조건에 맞는 테스트가 없습니다.':'현재 모집 중인 테스트가 없습니다.'}</div>`}</section>`);
 }
 
 /* ---------- tester ---------- */
@@ -291,7 +300,7 @@ function renderTester(){
   const open=S.tests.filter(t=>recruitmentOpen(t));
   const mineList=S.tests.filter(t=>t.owner!=='me'&&S.mine[t.id]),favorites=S.tests.filter(t=>S.favorites.includes(t.id)&&['open','closed'].includes(t.status));
   const genres=['전체',...GENRES.filter(g=>open.some(t=>matchesGenre(t,g))),OTHER_GENRE];
-  const list=ui.tTab==='mine'?mineList:filteredTests(ui.tTab==='saved'?favorites:open);
+  const list=ui.tTab==='mine'?mineList:filteredTests(ui.tTab==='saved'?favorites:open,!homeGenres&&ui.tTab==='saved'?'전체':ui.genre);
   const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중'],['alerts','알림']]);
   if(ui.tTab==='alerts')return workspace(side,notificationsHtml(allNotifications(),S,{page:true,canRefresh:!!cloud?.user}));
   const chips=ui.tTab==='open'?`<div class="sub" aria-label="장르 필터">${genres.map(g=>`<button type="button" class="chip" data-act="genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}</button>`).join('')}</div>`:'';
@@ -905,7 +914,7 @@ listen(document,'click',async e=>{
   if(a==='open-notification'){const n=allNotifications().find(n=>n.id===id);if(n&&await persistDeveloperDraft()!==false){S.readNotifications[id]=true;save();showNotificationTarget(n);}return;}
   if(a==='home-genre' ||a==='catalog-genre'){ui.genre=b.dataset.genre;render();return;}
   if(a==='feature'){ui.featured=id;render();return;}
-  if(a==='clear-filters'){ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
+  if(a==='clear-filters'){if(homeGenres||ui.page!=='home')ui.genre='전체';ui.search='';ui.platform='all';ui.sort='default';render();return;}
   if(a==='tab-t'){
     if(b.dataset.tab==='saved'&&cloud&&!cloud.requireUser())return;
     releaseStaged(ui.bugMedia);ui.bugMedia=[];ui.tTab=b.dataset.tab;ui.detail=null;
@@ -1269,6 +1278,7 @@ listen(document,'submit',async e=>{
 });
 
 listen(window,'hashchange',()=>{if(ui.saving)return;const p=hashPage();if(p&&p!==ui.page)nav(p)});
+if(homeEdition)listen(window,'indietest-preview-layout',()=>{if(ui.page==='home')render(false);});
 let disposeAccount;
 if(cloud){
  const footer=document.querySelector('footer p');if(footer)footer.textContent='IndieTest · 개발자와 플레이어가 함께 만드는 게임.';
