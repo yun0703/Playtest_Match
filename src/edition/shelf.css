@@ -1116,3 +1116,37 @@
 }
 :root[data-shelf] .shelf-empty-title { margin:0; font:800 24px/1.3 "Pretendard Variable","Pretendard",system-ui,sans-serif; letter-spacing:-.03em; color:var(--sh-ink); word-break:keep-all; }
 :root[data-shelf] .shelf-empty-card p:not(.shelf-empty-title) { margin:0 0 8px; font:500 14px/1.5 var(--at-sans); color:var(--sh-muted); word-break:keep-all; }
+
+/* Native cursor stays on an empty shelf; the custom cursor is only for game cases. */
+:root[data-shelf] .shelf-hero.is-empty .shelf-viewport,
+:root[data-shelf] .shelf-hero.is-empty .shelf-viewport * { cursor:auto !important; }
+:root[data-shelf] .shelf-hero.is-empty .shelf-empty-card a { cursor:pointer !important; }
+:root[data-shelf] .shelf-cursor:not(.is-visible) { display:none !important; }
+
+/* Signed-in menu: compact list instead of display-size links */
+:root[data-shelf] .utility-panel h2 { margin:8px 0 4px; }
+:root[data-shelf] .utility-link {
+  min-height:48px !important; font:600 15px/1.3 "Pretendard Variable","Pretendard",system-ui,sans-serif !important;
+  letter-spacing:-.01em; border-bottom:1px solid var(--line) !important;
+}
+:root[data-shelf] .utility-link::after { font-size:15px !important; }
+:root[data-shelf] .utility-link:last-of-type { border-bottom-color:var(--sh-rule) !important; }
+
+/* Participation cards: art aligned to the top of the row, no stray frame */
+:root[data-shelf] #main[data-page=tester] .participation-card.panel {
+  display:grid; grid-template-columns:clamp(160px,22%,260px) minmax(0,1fr); gap:10px 28px; align-items:start;
+  border:0 !important; border-top:1px solid var(--sh-rule) !important; padding:28px 0 !important; background:transparent !important;
+}
+:root[data-shelf] #main[data-page=tester] .participation-card .participant-art {
+  grid-column:1; grid-row:1 / span 6; align-self:start; margin:0; aspect-ratio:16/10; overflow:hidden;
+}
+:root[data-shelf] #main[data-page=tester] .participation-card .participant-art>* { width:100%; height:100%; object-fit:cover; display:block; }
+:root[data-shelf] #main[data-page=tester] .participation-card>:not(.participant-art) { grid-column:2; }
+:root[data-shelf] #main[data-page=tester] .participation-card h2 { font:800 26px/1.2 "Pretendard Variable","Pretendard",system-ui,sans-serif !important; letter-spacing:-.03em; margin:0; }
+@media(max-width:600px) {
+  :root[data-shelf] #main[data-page=tester] .participation-card.panel { grid-template-columns:96px minmax(0,1fr); gap:8px 16px; }
+  :root[data-shelf] #main[data-page=tester] .participation-card .participant-art { grid-row:1 / span 2; }
+  :root[data-shelf] #main[data-page=tester] .participation-card>:nth-child(n+4) { grid-column:1/-1; }
+}
+:root[data-shelf] #main[data-page=tester] .participation-card .cancellation-panel { border:0 !important; padding:0 !important; margin:0 !important; background:transparent !important; }
+:root[data-shelf] #main[data-page=tester] .participation-card .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }

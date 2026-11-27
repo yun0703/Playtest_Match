@@ -303,6 +303,7 @@ export function attachShelf(main) {
     void shelfMedia.hydrate(stage);
     // No recruiting games yet: keep the hero, show an empty shelf that invites the first upload.
     hero.classList.toggle('is-empty',!games.length);
+    if(!games.length){inside=false;cursor.classList.remove('is-visible');}
     hero.querySelector('.shelf-empty')?.remove();
     if(!games.length) {
       const empty=document.createElement('div');
@@ -447,7 +448,14 @@ export function attachShelf(main) {
   }
 
   // ---------- Input ----------
-  viewport.addEventListener('pointerenter',()=>{inside=true;cx=mx;cy=my;cursor.classList.add('is-visible');wake();});
+  // The custom cursor only exists over a shelf that has games; it is placed at the
+  // pointer before it becomes visible so it never flashes in the page corner.
+  viewport.addEventListener('pointerenter',event=>{
+    if(!games.length||event.pointerType!=='mouse')return;
+    inside=true;mx=cx=event.clientX;my=cy=event.clientY;
+    cursor.style.transform=`translate3d(${cx}px,${cy}px,0)`;
+    cursor.classList.add('is-visible');wake();
+  });
   viewport.addEventListener('pointerleave',()=>{inside=false;cursor.classList.remove('is-visible');hover=-1;wake();});
   const onMove=event=>{mx=event.clientX;my=event.clientY;if(inside||drag)wake();
     if(drag){const dx=event.clientX-drag.x;if(Math.abs(dx)>5)drag.moved=true;if(drag.moved)T=drag.T-dx/(dims.ws+dims.gap);}};
