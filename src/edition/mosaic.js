@@ -55,7 +55,7 @@ export function mosaicSection(games,{english=false,onBrowse}={}) {
     <div class="mosaic-copy">
       <p class="mosaic-kicker">${english?'For players & developers':'플레이어와 개발자를 위해'}</p>
       <h2 class="mosaic-title" id="mosaic-title">${lines.map(line=>`<span class="mosaic-line"><span>${esc(line)}</span></span>`).join('')}</h2>
-      <p class="mosaic-body">${!games.length?(english?'IndieTest is an archive of games still in the making. Post your build and be the first game players meet here.':'IndieTest는 아직 만들어지고 있는 게임들의 아카이브예요. 지금 게임을 올리면, 플레이어가 이곳에서 가장 먼저 만나는 게임이 돼요.'):english
+      <p class="mosaic-body">${!games.length?(english?'IndieTest is a testing space for games still in the making. Post your game and hear what players think.':'IndieTest는 아직 만들어지고 있는 게임들의 테스트 공간이에요. 지금 게임을 올리고, 플레이어들에게 의견을 받아보세요.'):english
         ?`IndieTest is an archive of games still in the making. Right now <b>${games.length} games</b> are waiting for their first players, and every answer goes straight to the people building them.`
         :`IndieTest는 아직 만들어지고 있는 게임들의 아카이브예요. 지금 <b>${games.length}개의 게임</b>이 첫 플레이어를 기다리고, 남긴 소감은 만드는 사람에게 바로 전해져요.`}</p>
       <div class="mosaic-actions">

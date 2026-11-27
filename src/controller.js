@@ -295,6 +295,12 @@ function slotsHtml(t){
   return `<div class="slots"><div class="bar ${full?'full':''}"><span style="width:${pct}%"></span></div><span class="mono">${t.applicants}/${t.slots}명</span></div>`;
 }
 function cancellationHtml(t,application){if(!application||!['waiting','applied'].includes(application.status))return '';const quitting=application.status==='applied',label=quitting?'참여 포기':'신청 취소';return `<section class="cancellation-panel">${ui.cancelApplication===t.id?`<p>${quitting?'참여를 포기하면 정원이 다시 열리고 빌드와 설문 접근이 종료됩니다.':'승인 대기 중인 신청을 취소합니다.'} 모집 중이면 다시 신청할 수 있으며, 기존 버그 제보는 유지됩니다.</p><div class="actions"><button type="button" class="btn danger" data-act="confirm-cancellation" data-id="${t.id}">${label} 확정</button><button type="button" class="btn ghost" data-act="keep-application">참여 유지</button></div>`:`<button type="button" class="text-link" data-act="cancel-application" data-id="${t.id}">${label}</button>`}</section>`;}
+// Dates a tester needs: when they applied, when they started playing and when feedback is due.
+function participationDatesHtml(t,m){
+  const day=value=>{if(!value)return '';const text=String(value);return text.length>=10?text.slice(0,10):text;};
+  const rows=[['신청일',day(m?.agreedAt)],['플레이 시작',m?.startedAt?day(m.startedAt):'아직 시작 전'],['피드백 마감',t.deadline?`${t.deadline} (KST 23:59)`:'']].filter(([,v])=>v);
+  return `<dl class="participation-dates">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+}
 function renderTester(){
   if(ui.detail){const d=byId(ui.detail);if(d&&visibleTo(d))return renderDetail(d)}
   const open=S.tests.filter(t=>recruitmentOpen(t));
@@ -304,7 +310,7 @@ function renderTester(){
   const side=sectionNav('테스터 메뉴','tab-t',ui.tTab,[['mine','내 참여 현황'],['saved','찜한 게임'],['open','모집 중'],['alerts','알림']]);
   if(ui.tTab==='alerts')return workspace(side,notificationsHtml(allNotifications(),S,{page:true,canRefresh:!!cloud?.user}));
   const chips=ui.tTab==='open'?`<div class="sub" aria-label="장르 필터">${genres.map(g=>`<button type="button" class="chip" data-act="genre" data-genre="${g}" aria-pressed="${ui.genre===g}">${g}</button>`).join('')}</div>`:'';
-  const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="participant-art">${gameArt(t)}</div><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
+  const cards=list.map(t=>ui.tTab==='mine'?`<article class="participation-card panel"><div class="participant-art">${gameArt(t)}</div><div class="row"><h2 data-no-translate>${esc(t.title)}</h2><span class="badge b-vis">${MINE_LABEL[S.mine[t.id].status]}</span></div>${participationDatesHtml(t,S.mine[t.id])}${progressHtml(t,S.mine[t.id])}${t.status==='hidden'||t.status==='appeal'?'<p class="notice">이 테스트는 현재 숨김 상태입니다.</p>':`<button class="btn ghost" type="button" data-act="open" data-id="${t.id}">참여 화면 열기 →</button>`}${cancellationHtml(t,S.mine[t.id])}<details><summary>내 버그 제보</summary>${bugListHtml(t,S.bugs)}</details></article>`:gameCard(t)).join('');
   const empty=ui.tTab==='saved'?'찜한 게임이 없습니다. 게임 카드의 하트를 눌러 모아보세요.':ui.tTab==='mine'?'아직 신청한 테스트가 없습니다. 모집 중 탭에서 플레이해 보고 싶은 게임을 골라 보세요.':'조건에 맞는 테스트가 없습니다.';
   const next=mineList.filter(t=>visibleTo(t)&&S.mine[t.id].status==='applied').sort((a,b)=>(a.deadline||'').localeCompare(b.deadline||''))[0];
   const hero=ui.tTab==='mine'&&next?`<section class="spotlight"><div><b>다음 플레이테스트</b><h2 data-no-translate>${esc(next.title)}</h2>${featureQuestion(next)}<div class="actions"><button class="btn" data-act="play-next" data-id="${next.id}">${S.mine[next.id].startedAt?'참여 화면 열기 →':'플레이 시작'}</button>${deadlineHtml(next)}</div></div><div class="hero-artwork">${gameArt(next)}</div></section>`:'';

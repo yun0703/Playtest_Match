@@ -103,6 +103,10 @@ export default {
 
   "개발자의 질문": "Developer’s question",
   "모집 중인 테스트": "Open playtests",
+  "신청일": "Applied",
+  "플레이 시작": "Started playing",
+  "아직 시작 전": "Not started yet",
+  "FOR PLAYERS": "FOR PLAYERS",
   "현재 모집 중인 테스트가 없습니다.": "No playtests are recruiting yet.",
   "테스터 메뉴": "Tester menu",
   "개발자 메뉴": "Developer menu",
