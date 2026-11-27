@@ -19,7 +19,7 @@
 .row-title,.feature-links button {border:0;background:transparent;color:var(--ink);cursor:pointer}
 .store-layout {grid-template-columns:clamp(160px,14vw,220px) minmax(0,1fr);gap:clamp(20px,3vw,52px)}
 .store-sidebar {border-right:1px solid var(--line);padding:8px 18px 20px 0}
-.store-sidebar h2 {font-size:19px}
+.store-sidebar h2 {font-size:18px}
 .side-link {min-height:38px;align-items:center;margin-bottom:3px;font-size:14px;padding-inline:15px}
 .side-link.active {border:0;background:var(--accent-soft);color:var(--ink);padding-left:15px}
 .store-content h1,.spotlight h2 {font-size:clamp(28px,3vw,48px);line-height:1.22;letter-spacing:-.055em;margin:8px 0 20px;overflow-wrap:anywhere}
@@ -29,7 +29,7 @@
 .spotlight .genre-label {font-size:14px}
 .spotlight .actions,.spotlight>div>p+.btn {margin-top:22px}
 .hero-question {margin-top:20px}
-.hero-question b {border-left:4px solid var(--button);padding-left:9px;font-size:13px}
+.hero-question b {border-left:4px solid var(--button);padding-left:9px;font-size:12px}
 .hero-question p {font-size:clamp(17px,1.6vw,23px);line-height:1.45;margin:7px 0;font-weight:650;white-space:pre-line}
 .island-art,.hero-artwork {width:100%;max-height:360px;object-fit:contain}
 .hero-artwork {overflow:hidden;border-radius:38% 12% 28% 10% / 18% 14% 24% 12%}
@@ -42,11 +42,11 @@
 .row-cover {border:0;background:transparent;padding:0;overflow:hidden;border-radius:12px}
 .row-cover>* {aspect-ratio:2.7/1}
 .row-cover .art-caption {display:none}
-.row-title {font-weight:700;font-size:17px;text-align:left;overflow-wrap:anywhere}
-.row-facts {display:flex;flex-wrap:wrap;gap:2px 8px;font-size:13px;color:var(--ink-2)}
+.row-title {font-weight:700;font-size:16px;text-align:left;overflow-wrap:anywhere}
+.row-facts {display:flex;flex-wrap:wrap;gap:2px 8px;font-size:12px;color:var(--ink-2)}
 .catalog-row .favorite-button {border:0;align-self:center}
 .catalog-row .favorite-button span+span {display:none}
-.catalog-row .favorite-button span:first-child {font-size:24px}
+.catalog-row .favorite-button span:first-child {font-size:22px}
 .dashboard-heading {display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}
 .dashboard-heading h1 {margin:0}
 .managed-game {display:grid;grid-template-columns:minmax(180px,30%) minmax(0,1fr);gap:0 24px;border:0;border-bottom:1px solid var(--line);padding:20px 0;border-radius:0}
@@ -120,13 +120,13 @@
 .capacity-modes .check {padding:5px 10px;border:1px solid var(--line);border-radius:30px}
 .capacity-modes .check:has(input:checked) {background:var(--accent-soft)}
 .capacity-stepper {display:grid;grid-template-columns:44px minmax(65px,100px) 44px;gap:8px;align-items:center}
-.capacity-stepper button {font-size:20px;padding:0}
+.capacity-stepper button {font-size:18px;padding:0}
 .capacity-stepper input {text-align:center}
 .capacity-stepper[hidden],#other-genre-field[hidden] {display:none}
 .notification-page {position:static;width:100%;max-height:none;overflow:visible;padding:0;border:0;box-shadow:none}
 .notification-page li {padding:14px 10px}
-.notification-page li button {font-size:15px}
-.notification-page li small,.notification-page li button>span {font-size:13px}
+.notification-page li button {font-size:14px}
+.notification-page li small,.notification-page li button>span {font-size:12px}
 
 fieldset.field {min-width:0}
 
@@ -164,7 +164,7 @@ fieldset.field {min-width:0}
 
 
 .game-work-items {display:flex;flex-wrap:wrap;gap:6px 10px;padding:0 0 12px}
-.work-count {display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:30px;padding:5px 10px;background:var(--surface);color:var(--ink-2);font-size:13px}
+.work-count {display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:30px;padding:5px 10px;background:var(--surface);color:var(--ink-2);font-size:12px}
 button.work-count {color:var(--ink)}
 button.work-count:hover {background:var(--accent-soft);border-color:var(--accent)}
 .work-count strong {font-variant-numeric:tabular-nums}
@@ -214,7 +214,7 @@ button.work-count:hover {background:var(--accent-soft);border-color:var(--accent
  .store-sidebar {gap:6px}
  .store-sidebar .side-link,.store-sidebar summary {min-height:44px;align-items:center}
  .store-sidebar summary {display:flex}
- .home-genre-strip>.side-link {font-size:13px}
+ .home-genre-strip>.side-link {font-size:12px}
  .dashboard-heading {align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:16px}
  .dashboard-heading .actions {gap:8px}
  .btn,.btn.sm,.favorite-button,.back,button.work-count {min-height:44px}
@@ -229,7 +229,7 @@ button.work-count:hover {background:var(--accent-soft);border-color:var(--accent
  .catalog-tools .catalog-selects>select {flex:1;min-width:0;width:0}
  .detail-navigation .mobile-task {display:inline-flex}
  .detail-navigation .back {margin:0}
- .mobile-task {font-size:13px}
+ .mobile-task {font-size:12px}
  .group,.qrow,.opts,.reqs,.card-body,.manage-controls,.version-filter,.game-work-items {min-width:0}
  .group,.qrow,.panel {padding:12px}
  .group .fields,.media-edit-grid {grid-template-columns:minmax(0,1fr)}
@@ -241,7 +241,7 @@ button.work-count:hover {background:var(--accent-soft);border-color:var(--accent
  .choice-editor>div>button {flex:none}
  .reqs li {flex-wrap:wrap;gap:8px}
  .notification-page>.row {align-items:flex-start}
- .notification-page .actions .text-link {min-height:44px;font-size:13px}
+ .notification-page .actions .text-link {min-height:44px;font-size:12px}
  .guide-columns {grid-template-columns:minmax(0,1fr);gap:12px;margin-block:16px}
  .guide-columns .panel {padding:16px}
 }
@@ -250,8 +250,8 @@ button.work-count:hover {background:var(--accent-soft);border-color:var(--accent
 .moderation-history ul {list-style:none;padding:0;margin:0}
 .moderation-history li {padding:14px 0;border-top:1px solid var(--line)}
 .moderation-history li strong,.moderation-note {overflow-wrap:anywhere}
-.moderation-meta {display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--ink-2);font-size:13px;margin-block:5px}
-.moderation-transition {font-size:13px;margin-block:5px}
+.moderation-meta {display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--ink-2);font-size:12px;margin-block:5px}
+.moderation-transition {font-size:12px;margin-block:5px}
 .moderation-note {white-space:pre-wrap;margin-top:8px}
 #moderation-game-filter {width:min(100%,380px)}
 

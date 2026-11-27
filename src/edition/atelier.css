@@ -1,0 +1,562 @@
+/* Concept 4 · Atelier
+   Layered on top of gallery.css + mural.css (concept 2 behaviour).
+   Direction: a warm-paper gallery wall, a deep indigo anchor, an editorial serif
+   for display type with a quiet grotesque for structure, 1px hairline frames,
+   pill buttons, flat colour blocks and no shadows.
+
+   Constraint brief (Refactoring UI):
+   - Hierarchy: one display voice (serif) per section; everything structural is the grotesque.
+   - One primary action per view (yellow pill); secondary actions are outlined pills.
+   - Type scale: 12 / 14 / 16 / 18 / 22 / 28 / 32 / 40 / 54 + display clamp(40px → 88px). Nothing below 12px.
+   - Spacing scale: 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 60 / 80.
+   - Three text colours: ink, ink-2, ink-3. Accents only on fills, tags and links. */
+
+:root[data-edition=atelier] {
+  /* Colour */
+  /* Light mode sits on white; warm paper is kept for quiet fills only. */
+  --at-paper:#ffffff;
+  --at-paper-2:#f5f0e9;
+  --at-paper-3:#ece4d8;
+  --at-white:#ffffff;
+  --at-ink:#14121a;
+  --at-ink-2:#3d3946;
+  --at-ink-3:#6a6472;
+  --at-indigo:#1d1574;
+  --at-indigo-2:#2c2390;
+  --at-cobalt:#2846a6;
+  --at-yellow:#ffce3a;
+  --at-yellow-2:#f3bd17;
+  --at-highlight:#fff05c;
+  --at-vermillion:#d24d2c;
+
+  /* Type */
+  /* Hahmlet (display) and Pretendard (text) are both SIL Open Font License: free for commercial use. */
+  --at-serif:"Hahmlet","Nanum Myeongjo","Noto Serif KR","Batang",serif;
+  --at-sans:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --at-text-12:12px; --at-text-14:14px; --at-text-16:16px; --at-text-18:18px; --at-text-22:22px;
+  --at-text-28:28px; --at-text-32:32px; --at-text-40:40px; --at-text-54:54px;
+  --at-display:clamp(40px,6.2vw,88px);
+  --at-heading-lg:clamp(32px,4.2vw,54px);
+
+  /* Space */
+  --at-4:4px; --at-8:8px; --at-12:12px; --at-16:16px; --at-20:20px; --at-24:24px;
+  --at-32:32px; --at-40:40px; --at-60:60px; --at-80:80px;
+
+  /* Shape */
+  --at-hairline:1px solid var(--at-ink);
+  --at-pill:999px;
+  --at-panel:10px;
+
+  /* Map onto the app's own tokens so every screen picks the palette up. */
+  --bg:var(--at-paper);
+  --surface:var(--at-white);
+  --surface-2:var(--at-paper-2);
+  --input:var(--at-white);
+  --ink:var(--at-ink);
+  --ink-2:var(--at-ink-2);
+  --line:#d9d1c5;
+  --accent:var(--at-indigo);
+  --accent-soft:#e6e1f6;
+  --button:var(--at-yellow);
+  --gallery-yellow:var(--at-yellow);
+  --gallery-yellow-hover:var(--at-yellow-2);
+  --mural-yellow:var(--at-yellow);
+  --mural-blue:var(--at-cobalt);
+  --mural-deep:var(--at-indigo);
+  --mural-display:var(--at-serif);
+  --gallery-heading:var(--at-sans);
+  --font-body:var(--at-sans);
+  --font-display:var(--at-serif);
+  --font-mono:var(--at-sans);
+}
+:root[data-edition=atelier][data-theme=dark] {
+  --at-paper:#15131c;
+  --at-paper-2:#1f1c29;
+  --at-white:#1b1824;
+  --at-ink:#f4ede4;
+  --at-ink-2:#d6cec4;
+  --at-ink-3:#a79fae;
+  --at-indigo:#b9b0ff;
+  --line:#3a3546;
+  --accent-soft:#2b2647;
+}
+
+/* ---------- Base ---------- */
+:root[data-edition=atelier] body {
+  background:var(--at-paper);
+  color:var(--at-ink);
+  font:400 var(--at-text-16)/1.5 var(--at-sans);
+  word-break:keep-all;
+  overflow-wrap:break-word;
+}
+:root[data-edition=atelier] * { box-shadow:none !important; }
+:root[data-edition=atelier] :focus-visible { outline:2px solid var(--at-indigo); outline-offset:3px; }
+:root[data-edition=atelier] :where(h1,h2,h3) { color:var(--at-indigo); letter-spacing:-.02em; }
+:root[data-edition=atelier] .hint,
+:root[data-edition=atelier] small { color:var(--at-ink-3); }
+
+/* Links: the coloured underline is the affordance. */
+:root[data-edition=atelier] .text-link {
+  color:var(--at-ink);
+  font-size:var(--at-text-14);
+  text-decoration:underline;
+  text-decoration-thickness:2px;
+  text-underline-offset:4px;
+  text-decoration-color:var(--at-indigo);
+  min-height:44px;
+}
+:root[data-edition=atelier] .text-link:hover { text-decoration-color:var(--at-yellow); }
+
+/* ---------- Buttons: pills only ---------- */
+:root[data-edition=atelier] .btn {
+  border-radius:var(--at-pill);
+  min-height:44px;
+  padding:0 var(--at-24);
+  font:600 var(--at-text-14)/1 var(--at-sans);
+  letter-spacing:0;
+  border:1px solid transparent;
+}
+:root[data-edition=atelier] .btn:not(.ghost,.danger) { background:var(--at-yellow); color:var(--at-ink); }
+:root[data-edition=atelier] .btn:not(.ghost,.danger):hover { background:var(--at-yellow-2); color:var(--at-ink); }
+:root[data-edition=atelier] .btn.ghost { background:transparent; color:var(--at-ink); border:var(--at-hairline); }
+:root[data-edition=atelier] .btn.ghost:hover { background:var(--at-ink); color:var(--at-paper); }
+:root[data-edition=atelier] .btn.danger { background:transparent; color:var(--at-vermillion); border:1px solid var(--at-vermillion); }
+
+/* ---------- Header: wordmark, quiet pills, hairline ---------- */
+:root[data-edition=atelier] .site { border-bottom:var(--at-hairline); min-height:72px; }
+:root[data-edition=atelier] .logo { font:700 var(--at-text-22)/1 var(--at-serif); color:var(--at-indigo); letter-spacing:-.03em; }
+:root[data-edition=atelier] .logo i { color:var(--at-yellow); }
+:root[data-edition=atelier] .site .menu a {
+  font:500 var(--at-text-14)/1 var(--at-sans);
+  color:var(--at-ink-2);
+  padding:var(--at-12) var(--at-16);
+  border-radius:var(--at-pill);
+  border:1px solid transparent;
+}
+:root[data-edition=atelier] .site .menu a:hover { border-color:var(--at-ink); color:var(--at-ink); }
+:root[data-edition=atelier] .site .menu a[aria-current=page] { background:var(--at-indigo); color:#fff; border-color:var(--at-indigo); }
+:root[data-edition=atelier] .site .utility-menu>summary,
+:root[data-edition=atelier] .site .notification-menu>summary {
+  border:var(--at-hairline); border-radius:var(--at-pill); background:transparent; color:var(--at-ink); min-height:44px;
+}
+:root[data-edition=atelier] .site .header-login .account-menu>summary,
+:root[data-edition=atelier] .site .header-login-link {
+  border-radius:var(--at-pill); background:var(--at-indigo); color:#fff; border:1px solid var(--at-indigo); min-height:44px;
+}
+:root[data-edition=atelier] .site .header-login .account-menu[open]>summary { background:var(--at-indigo-2); color:#fff; }
+:root[data-edition=atelier] :is(.utility-panel,.account-panel,.notification-panel,.account-dialog,.genre-dropdown) {
+  border:var(--at-hairline); border-radius:var(--at-panel); background:var(--at-white);
+}
+
+/* ---------- Home hero: the illustration is the surface ---------- */
+:root[data-edition=atelier] #main[data-page=home] .mural-hero {
+  background:var(--at-indigo);
+  /* About two thirds of the screen, so the closing-soon strip and catalogue heading show on first view. */
+  min-height:clamp(440px,64vh,640px);
+}
+/* A single low scrim keeps white type readable over bright game art. */
+:root[data-edition=atelier] #main[data-page=home] .mural-hero::before {
+  background:linear-gradient(0deg,rgba(20,18,26,.72),rgba(20,18,26,.28) 42%,transparent 70%);
+}
+:root[data-edition=atelier] #main[data-page=home] .mural-copy { align-self:end; padding-bottom:var(--at-24); }
+:root[data-edition=atelier] #main[data-page=home] h1.mural-title {
+  font:700 clamp(40px,5.4vw,76px)/1.06 var(--at-serif);
+  letter-spacing:-.035em;
+  color:#fff;
+  margin:0 0 var(--at-32);
+}
+:root[data-edition=atelier] .mural-title span:nth-child(2) { color:var(--at-yellow); }
+:root[data-edition=atelier] .mural-browse { min-height:52px; padding-inline:var(--at-32); font-size:var(--at-text-16); color:var(--at-ink); }
+:root[data-edition=atelier] .mural-rail { border-top:1px solid rgba(255,255,255,.7); padding-top:var(--at-12); }
+:root[data-edition=atelier] .mural-credit-label { font-size:var(--at-text-12); color:#fff; letter-spacing:.04em; text-transform:uppercase; }
+:root[data-edition=atelier] .mural-credit-game { font:700 var(--at-text-16)/1.2 var(--at-serif); border-bottom:2px solid var(--at-yellow); }
+:root[data-edition=atelier] .mural-index { font-size:var(--at-text-12); }
+:root[data-edition=atelier] .mural-toggle {
+  background:transparent; border:1px solid #fff; border-radius:var(--at-pill);
+  font-size:var(--at-text-12); min-height:36px; padding:0 var(--at-16);
+}
+:root[data-edition=atelier] .mural-toggle:hover { background:#fff; color:var(--at-indigo); }
+
+/* ---------- Catalogue: gallery wall ---------- */
+:root[data-edition=atelier] #main[data-page=home] .recruit-section {
+  margin-top:var(--at-80);
+  gap:var(--at-40) var(--at-24);
+}
+:root[data-edition=atelier] #main[data-page=home] .section-heading {
+  align-items:end;
+  padding-bottom:var(--at-20);
+  border-bottom:var(--at-hairline);
+}
+:root[data-edition=atelier] #main[data-page=home] .section-heading h2 {
+  font:700 var(--at-heading-lg)/1.04 var(--at-serif);
+  letter-spacing:-.035em;
+  color:var(--at-indigo);
+}
+:root[data-edition=atelier] .catalog-shortcuts .btn { min-height:40px; }
+:root[data-edition=atelier] :is(.search-form input,.catalog-tools select,.version-filter select) {
+  background:var(--at-white);
+  border:var(--at-hairline);
+  border-radius:var(--at-pill);
+  min-height:44px;
+  font-size:var(--at-text-14);
+  color:var(--at-ink);
+}
+:root[data-edition=atelier] :is(input,select,textarea):focus { border-color:var(--at-indigo); outline:2px solid var(--at-indigo); outline-offset:1px; }
+
+/* Cards: sharp, framed, left-aligned labels. */
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n) { gap:var(--at-8); }
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-cover {
+  aspect-ratio:4/5;
+  border-radius:0;
+  border:var(--at-hairline);
+  background:var(--at-paper-2);
+  overflow:hidden;
+}
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>:is(.row-title,.row-facts,.slots,.deadline-line) {
+  justify-content:flex-start;
+  text-align:left;
+  justify-self:stretch;
+}
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-title {
+  padding-top:var(--at-12);
+  font:700 var(--at-text-22)/1.2 var(--at-serif);
+  letter-spacing:-.025em;
+  color:var(--at-indigo);
+}
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-title:hover {
+  text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px; text-decoration-color:var(--at-yellow);
+}
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-facts { gap:var(--at-8); font-size:var(--at-text-14); color:var(--at-ink-2); }
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.slots { width:100%; justify-self:stretch; }
+:root[data-edition=atelier] .bar { background:var(--at-paper-2); border-radius:0; height:4px; }
+:root[data-edition=atelier] .bar span { background:var(--at-indigo); border-radius:0; }
+:root[data-edition=atelier] .slots .mono { font:600 var(--at-text-12)/1 var(--at-sans); color:var(--at-ink-2); white-space:nowrap; }
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.favorite-button {
+  top:var(--at-12); right:var(--at-12);
+  min-width:44px; min-height:44px;
+  background:var(--at-white);
+  color:var(--at-ink);
+  border:var(--at-hairline);
+}
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.favorite-button.saved,
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.favorite-button:hover { background:var(--at-yellow); }
+
+/* Tags read like a highlighter mark: flat, square, black text. */
+:root[data-edition=atelier] :is(.badge,.mural-demo-status) {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--at-4);
+  border-radius:0;
+  font:700 var(--at-text-12)/1.2 var(--at-sans);
+  padding:var(--at-4) var(--at-8);
+  white-space:nowrap;
+}
+:root[data-edition=atelier] .deadline-line { font-size:var(--at-text-12); color:var(--at-ink-2); gap:var(--at-8); }
+:root[data-edition=atelier] .deadline-line strong { font-size:var(--at-text-12); color:var(--at-ink); }
+
+/* ---------- Role sections: flat colour blocks ---------- */
+:root[data-edition=atelier] .mural-workspaces { margin-top:var(--at-80); }
+:root[data-edition=atelier] .mural-workspace--tester { background:var(--at-cobalt); color:#fff; }
+:root[data-edition=atelier] .mural-workspace--developer { background:var(--at-yellow); color:var(--at-indigo); }
+:root[data-edition=atelier] .mural-workspace-inner { padding-block:var(--at-80); }
+:root[data-edition=atelier] .mural-workspace-copy h2 {
+  font:700 clamp(40px,5.4vw,72px)/1.04 var(--at-serif);
+  letter-spacing:-.04em;
+  color:inherit;
+}
+:root[data-edition=atelier] .mural-workspace--guest .mural-workspace-copy h2 { font-size:clamp(36px,4.6vw,64px); }
+:root[data-edition=atelier] .mural-workspace-copy p { font-size:var(--at-text-18); line-height:1.6; max-width:30em; }
+:root[data-edition=atelier] .mural-guest-label { font:600 var(--at-text-14)/1 var(--at-sans); letter-spacing:.06em; }
+:root[data-edition=atelier] .mural-workspace--tester .mural-title-line+.mural-title-line { color:var(--at-yellow); }
+:root[data-edition=atelier] .mural-workspace--developer .mural-title-line+.mural-title-line { color:var(--at-cobalt); }
+:root[data-edition=atelier] .mural-workspace-copy .btn:not(.ghost,.danger) { background:var(--at-indigo); color:#fff; }
+:root[data-edition=atelier] .mural-workspace-copy .btn:not(.ghost,.danger):hover { background:var(--at-ink); color:#fff; }
+:root[data-edition=atelier] .mural-workspace--tester .mural-workspace-copy .btn:not(.ghost,.danger) { background:var(--at-yellow); color:var(--at-ink); }
+:root[data-edition=atelier] .mural-workspace--tester .mural-workspace-copy .btn:not(.ghost,.danger):hover { background:#fff; }
+:root[data-edition=atelier] .mural-dashboard {
+  background:var(--at-white); color:var(--at-ink);
+  border:var(--at-hairline); border-radius:0;
+}
+:root[data-edition=atelier] .mural-dashboard-header h3 { font:700 var(--at-text-28)/1.1 var(--at-serif); color:var(--at-indigo); }
+:root[data-edition=atelier] .mural-dashboard-header>span,
+:root[data-edition=atelier] :is(.mural-demo-steps li,.mural-demo-tasks dt) { font-size:var(--at-text-12); color:var(--at-ink-3); }
+:root[data-edition=atelier] .mural-demo-game .game-art { border-radius:0; }
+:root[data-edition=atelier] .mural-demo-tasks>div { border-radius:0; border:1px solid var(--line); background:var(--at-paper); }
+:root[data-edition=atelier] .mural-demo-tasks dd { font:700 var(--at-text-28)/1 var(--at-serif); color:var(--at-indigo); }
+
+/* ---------- Panels and inner pages ---------- */
+:root[data-edition=atelier] :is(.panel,.group,.signup-card,.bug-card,.report-card,.guide-columns .panel) {
+  background:var(--at-white);
+  border:var(--at-hairline);
+  border-radius:var(--at-panel);
+}
+:root[data-edition=atelier] :is(.row-cover,.managed-art,.managed-thumb,.participant-art,.detail-cover,.gallery-stage,.cover-button,.game-art) { border-radius:0; }
+:root[data-edition=atelier] :is(.dashboard-heading h1,#main[data-page=tester] .store-content>h1,#main[data-page=guide] h1,.signup-card h1) {
+  font:700 var(--at-heading-lg)/1.05 var(--at-serif);
+  letter-spacing:-.035em;
+  color:var(--at-indigo);
+}
+:root[data-edition=atelier] .side-link { font-size:var(--at-text-14); border-radius:var(--at-pill); min-height:40px; }
+:root[data-edition=atelier] .side-link.active { background:var(--at-indigo); color:#fff; }
+:root[data-edition=atelier] .chip { border:var(--at-hairline); border-radius:var(--at-pill); font-size:var(--at-text-14); min-height:40px; background:transparent; }
+:root[data-edition=atelier] .chip[aria-pressed=true] { background:var(--at-indigo); color:#fff; border-color:var(--at-indigo); }
+:root[data-edition=atelier] .empty { border:1px dashed var(--at-ink-3); border-radius:0; background:transparent; color:var(--at-ink-2); }
+
+/* ---------- Closing band ---------- */
+:root[data-edition=atelier] footer {
+  margin-top:0;
+  padding-block:var(--at-60);
+  color:#fff;
+  border:0;
+  /* Full-bleed indigo behind a centred column. */
+  border-image:conic-gradient(var(--at-indigo) 0 0) fill 0 // 0 100vw;
+}
+:root[data-edition=atelier] footer .footer-brand { color:#fff; font:700 var(--at-text-28)/1.1 var(--at-serif); }
+:root[data-edition=atelier] footer .footer-brand span { color:#d9d4ff; font:400 var(--at-text-14)/1.5 var(--at-sans); }
+:root[data-edition=atelier] footer p { color:#d9d4ff; font-size:var(--at-text-14); }
+:root[data-edition=atelier] footer .btn.ghost { color:#fff; border-color:#fff; }
+:root[data-edition=atelier] footer .btn.ghost:hover { background:var(--at-yellow); color:var(--at-ink); border-color:var(--at-yellow); }
+
+/* ---------- Small screens ---------- */
+@media(max-width:600px) {
+  :root[data-edition=atelier] #main[data-page=home] .mural-hero { min-height:clamp(500px,82vh,640px); }
+  :root[data-edition=atelier] #main[data-page=home] h1.mural-title { font-size:clamp(36px,10.4vw,52px); line-height:1.08; }
+  :root[data-edition=atelier] #main[data-page=home] .recruit-section { margin-top:var(--at-40); gap:var(--at-32) var(--at-12); }
+  :root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-title { font-size:var(--at-text-18); }
+  :root[data-edition=atelier] .mural-workspace-inner { padding-block:var(--at-60); }
+  :root[data-edition=atelier] .mural-workspace-copy p { font-size:var(--at-text-16); }
+}
+
+/* ---------- Genre chips and filters: room between rows ---------- */
+:root[data-edition=atelier] .sub { gap:var(--at-8); margin:var(--at-8) 0 var(--at-24); }
+:root[data-edition=atelier] .catalog-tools { gap:var(--at-12); margin-bottom:var(--at-32); }
+:root[data-edition=atelier] .chip { padding:0 var(--at-16); color:var(--at-ink); }
+:root[data-edition=atelier] .chip:hover { background:var(--at-paper-2); }
+
+/* ---------- Tester catalogue cards ---------- */
+:root[data-edition=atelier] .game-card .card-body { padding-top:var(--at-16); gap:var(--at-8); }
+:root[data-edition=atelier] .game-card :is(.cover,.game-art,.row-cover) { border:var(--at-hairline); border-radius:0; }
+:root[data-edition=atelier] .game-card h3 { font:700 var(--at-text-22)/1.2 var(--at-serif); letter-spacing:-.025em; color:var(--at-indigo); }
+:root[data-edition=atelier] .game-card .team { font-size:var(--at-text-12); color:var(--at-ink-3); }
+:root[data-edition=atelier] .game-card .teaser { font-size:var(--at-text-14); line-height:1.6; color:var(--at-ink-2); min-height:0; }
+:root[data-edition=atelier] .art-caption { font:600 var(--at-text-12)/1 var(--at-sans); letter-spacing:.04em; background:var(--at-ink); color:#fff; padding:var(--at-4) var(--at-8); bottom:0; right:0; }
+:root[data-edition=atelier] .feedback-focus { border-left:2px solid var(--at-indigo); background:var(--at-paper-2); border-radius:0; padding:var(--at-12) var(--at-16); }
+:root[data-edition=atelier] .feedback-focus h3 { font:700 var(--at-text-12)/1.3 var(--at-sans); color:var(--at-indigo); }
+:root[data-edition=atelier] .feedback-focus p { font-size:var(--at-text-14); line-height:1.6; }
+:root[data-edition=atelier] .favorite-button { border:var(--at-hairline); border-radius:var(--at-pill); min-height:36px; padding:0 var(--at-12); background:transparent; font-size:var(--at-text-12); }
+:root[data-edition=atelier] .store-sidebar h2 { font:700 var(--at-text-12)/1.3 var(--at-sans); letter-spacing:.06em; color:var(--at-ink-3); }
+
+/* ---------- Sign-in panel: a framed card hung under the header ---------- */
+:root[data-edition=atelier] .account-panel {
+  border:var(--at-hairline);
+  border-top:4px solid var(--at-indigo);
+  border-radius:0;
+  padding:var(--at-32) var(--at-24) var(--at-24);
+  background:var(--at-white);
+}
+:root[data-edition=atelier] .account-menu h2,
+:root[data-edition=atelier] .utility-panel .account-menu h2 {
+  font:700 var(--at-text-28)/1.1 var(--at-serif);
+  letter-spacing:-.03em;
+  color:var(--at-indigo);
+  margin:0 0 var(--at-8);
+}
+:root[data-edition=atelier] .account-panel p { font-size:var(--at-text-14); line-height:1.6; color:var(--at-ink-2); }
+:root[data-edition=atelier] .social-logins { display:grid; gap:var(--at-8); }
+:root[data-edition=atelier] .social-login {
+  min-height:48px;
+  border-radius:var(--at-pill);
+  border:var(--at-hairline);
+  background:var(--at-white);
+  color:var(--at-ink);
+  font:600 var(--at-text-14)/1 var(--at-sans);
+  padding:0 var(--at-20);
+}
+:root[data-edition=atelier] .social-login:hover { background:var(--at-paper-2); }
+/* Naver's own button colour stays (brand guideline). */
+:root[data-edition=atelier] .social-naver { background:#03c75a; border-color:#03c75a; color:#fff; }
+:root[data-edition=atelier] .social-naver:hover { background:#02b351; }
+:root[data-edition=atelier] .account-divider { border-top:1px solid var(--line); margin:var(--at-24) 0 var(--at-16); }
+:root[data-edition=atelier] .account-divider span { background:var(--at-white); font-size:var(--at-text-12); color:var(--at-ink-3); }
+:root[data-edition=atelier] .account-panel label { font:600 var(--at-text-12)/1.3 var(--at-sans); color:var(--at-ink); }
+:root[data-edition=atelier] .account-menu input,
+:root[data-edition=atelier] .menu-preferences select {
+  min-height:44px;
+  border:var(--at-hairline);
+  border-radius:var(--at-panel);
+  background:var(--at-white);
+  color:var(--at-ink);
+  font-size:var(--at-text-14);
+  padding:0 var(--at-12);
+}
+:root[data-edition=atelier] .account-panel [data-account-form]>.btn { width:100%; min-height:48px; margin-top:var(--at-12); }
+:root[data-edition=atelier] .account-panel .text-link { min-height:32px; }
+
+/* ---------- Menu panel ---------- */
+:root[data-edition=atelier] .utility-panel {
+  border:var(--at-hairline);
+  border-top:4px solid var(--at-indigo);
+  border-radius:0;
+  padding:var(--at-8) var(--at-24) var(--at-24);
+  background:var(--at-white);
+}
+:root[data-edition=atelier] .utility-link {
+  display:flex; align-items:center; justify-content:space-between;
+  min-height:56px;
+  padding:0;
+  border-bottom:var(--at-hairline);
+  font:700 var(--at-text-22)/1 var(--at-serif);
+  color:var(--at-indigo);
+  text-decoration:none;
+}
+:root[data-edition=atelier] .utility-link::after { content:"→"; font:400 var(--at-text-18)/1 var(--at-sans); }
+:root[data-edition=atelier] .utility-link:hover { color:var(--at-ink); }
+:root[data-edition=atelier] .menu-preferences { margin-top:var(--at-24); display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:var(--at-12) var(--at-16); }
+:root[data-edition=atelier] .menu-preferences h2,
+:root[data-edition=atelier] .utility-panel h2 { grid-column:1/-1; font:700 var(--at-text-12)/1.3 var(--at-sans); letter-spacing:.06em; color:var(--at-ink-3); margin:0; }
+:root[data-edition=atelier] .menu-preferences label { font:600 var(--at-text-14)/1.3 var(--at-sans); color:var(--at-ink); }
+:root[data-edition=atelier] .menu-preferences .hint { grid-column:1/-1; font-size:var(--at-text-12); margin:0; }
+:root[data-edition=atelier] .utility-panel .account-menu>summary { border-radius:var(--at-pill); border:var(--at-hairline); background:transparent; min-height:44px; }
+
+/* ---------- Colour roles (fixed) ----------
+   yellow      → the one primary action per view (filled pill)
+   indigo      → titles, current location, progress
+   highlighter → time-sensitive tags only (closing soon, new)
+   cobalt      → the tester block only
+   vermillion  → problems (overdue, rejected, reports)
+   Everything else is ink on white with hairlines. */
+
+/* ---------- Status badges: colour plus a glyph, never colour alone ---------- */
+:root[data-edition=atelier] .b-vis,
+:root[data-edition=atelier] .b-public { background:var(--at-white); color:var(--at-ink); box-shadow:inset 0 0 0 1px var(--at-ink) !important; }
+:root[data-edition=atelier] .b-pending,
+:root[data-edition=atelier] .mural-demo-status { background:var(--at-highlight); color:var(--at-ink); }
+:root[data-edition=atelier] .b-pending::before { content:"◔" / ""; }
+:root[data-edition=atelier] .b-approved { background:var(--at-indigo); color:#fff; }
+:root[data-edition=atelier] .b-approved::before { content:"✓" / ""; }
+:root[data-edition=atelier] .b-rejected { background:var(--at-white); color:var(--at-vermillion); box-shadow:inset 0 0 0 1px var(--at-vermillion) !important; }
+:root[data-edition=atelier] .b-rejected::before { content:"!" / ""; font-weight:800; }
+:root[data-edition=atelier] .b-mine { background:var(--at-ink); color:var(--at-white); }
+:root[data-edition=atelier] .deadline-line.overdue strong { color:var(--at-vermillion); }
+:root[data-edition=atelier] .genre-label { font:600 var(--at-text-12)/1.3 var(--at-sans); color:var(--at-ink-3); letter-spacing:.02em; }
+
+/* ---------- Closing-soon strip under the hero ---------- */
+:root[data-edition=atelier] #main[data-page=home] .atelier-closing {
+  grid-column:1; grid-row:2;
+  width:var(--mural-content);
+  margin:0 auto;
+  display:flex; flex-wrap:wrap; align-items:center; gap:var(--at-8) var(--at-24);
+  padding:var(--at-16) 0;
+  border-bottom:var(--at-hairline);
+}
+:root[data-edition=atelier] #main[data-page=home] .recruit-section { grid-row:3; margin-top:var(--at-60); }
+:root[data-edition=atelier] .mural-workspaces { grid-row:4; }
+:root[data-edition=atelier] .atelier-closing-label { font:700 var(--at-text-12)/1 var(--at-sans); letter-spacing:.06em; color:var(--at-ink-3); }
+:root[data-edition=atelier] .atelier-closing button {
+  display:inline-flex; align-items:center; gap:var(--at-8);
+  min-height:44px; padding:0; border:0; background:none; cursor:pointer;
+  color:var(--at-ink);
+}
+:root[data-edition=atelier] .atelier-closing strong { font:700 var(--at-text-18)/1.2 var(--at-serif); color:var(--at-indigo); }
+:root[data-edition=atelier] .atelier-closing button:hover strong { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px; text-decoration-color:var(--at-yellow); }
+
+/* ---------- Tester cards: one teaser, one meta line, icon favourite ---------- */
+:root[data-edition=atelier] .game-card { position:relative; }
+:root[data-edition=atelier] .game-card .row { justify-content:space-between; }
+:root[data-edition=atelier] .game-card .favorite-button {
+  position:absolute; top:var(--at-12); right:var(--at-12);
+  width:44px; height:44px; min-height:44px; padding:0;
+  display:grid; place-items:center;
+  border-radius:50%; background:var(--at-white); border:var(--at-hairline);
+  font-size:var(--at-text-18);
+}
+:root[data-edition=atelier] .game-card .favorite-button.saved { background:var(--at-yellow); }
+:root[data-edition=atelier] .game-card .favorite-button>span:last-child {
+  position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;
+}
+:root[data-edition=atelier] .game-card .teaser {
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;
+}
+:root[data-edition=atelier] .game-card .card-body { display:flex; flex-direction:column; }
+:root[data-edition=atelier] .game-card .row { order:1; }
+:root[data-edition=atelier] .game-card h3 { order:2; margin:0; }
+:root[data-edition=atelier] .game-card .team { order:3; margin:0; }
+:root[data-edition=atelier] .game-card .card-meta { order:4; margin-top:calc(var(--at-8) * -1); font-size:var(--at-text-12); color:var(--at-ink-3); gap:var(--at-8); }
+:root[data-edition=atelier] .game-card .teaser { order:5; }
+:root[data-edition=atelier] .game-card .feedback-focus { order:6; }
+:root[data-edition=atelier] .game-card .foot { order:7; }
+:root[data-edition=atelier] .game-card .card-meta span+span::before { content:"·"; margin-right:var(--at-8); }
+:root[data-edition=atelier] .game-card .foot { display:grid; gap:var(--at-12); padding-top:var(--at-12); border-top:1px solid var(--line); }
+:root[data-edition=atelier] .game-card .card-join { justify-self:start; }
+
+/* ---------- Density pass: fewer empty fields, more editorial structure ---------- */
+/* Facts on the right of the closing strip. */
+:root[data-edition=atelier] .atelier-facts { display:flex; gap:var(--at-32); margin:0 0 0 auto; }
+:root[data-edition=atelier] .atelier-facts>div { display:grid; gap:2px; }
+:root[data-edition=atelier] .atelier-facts dd { margin:0; font:700 var(--at-text-28)/1 var(--at-serif); color:var(--at-indigo); font-variant-numeric:tabular-nums; }
+:root[data-edition=atelier] .atelier-facts dt { font:600 var(--at-text-12)/1.2 var(--at-sans); color:var(--at-ink-3); letter-spacing:.04em; }
+:root[data-edition=atelier] #main[data-page=home] .atelier-closing { padding:var(--at-20) 0; }
+
+/* Catalogue: three columns of landscape cards fill the wall evenly. */
+:root[data-edition=atelier] #main[data-page=home] .recruit-section { grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--at-40) var(--at-32); }
+:root[data-edition=atelier] #main[data-page=home] .recruit-section>:is(.section-heading,.atelier-lede,.catalog-tools,.empty) { grid-column:1/-1; }
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-cover { aspect-ratio:4/3; }
+:root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-title { font-size:var(--at-text-28); }
+:root[data-edition=atelier] #main[data-page=home] .section-heading { border-bottom:0; padding-bottom:0; }
+:root[data-edition=atelier] #main[data-page=home] .section-heading h2::before {
+  content:"Now recruiting"; display:block; margin-bottom:var(--at-12);
+  font:600 var(--at-text-12)/1 var(--at-sans); letter-spacing:.14em; text-transform:uppercase; color:var(--at-ink-3);
+}
+:root[data-edition=atelier] .atelier-lede {
+  margin:calc(var(--at-24) * -1) 0 0; padding-bottom:var(--at-24); border-bottom:var(--at-hairline);
+  font-size:var(--at-text-18); line-height:1.5; color:var(--at-ink-2); max-width:40em;
+}
+
+/* Role blocks: photo fills its half edge to edge. */
+:root[data-edition=atelier] .mural-workspace--guest .mural-workspace-inner {
+  width:100%; max-width:none; padding:0; gap:0;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:stretch;
+}
+:root[data-edition=atelier] .mural-workspace--developer .mural-workspace-inner { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+:root[data-edition=atelier] .mural-workspace--guest .mural-workspace-copy {
+  align-self:center;
+  padding:var(--at-80) clamp(24px,6vw,96px);
+  max-width:640px;
+}
+:root[data-edition=atelier] .mural-workspace--tester .mural-workspace-copy { justify-self:end; }
+:root[data-edition=atelier] .mural-guest-art { aspect-ratio:auto; min-height:clamp(380px,40vw,560px); height:100%; overflow:hidden; }
+:root[data-edition=atelier] .mural-guest-art img { object-fit:cover; width:100%; height:100%; }
+:root[data-edition=atelier] .mural-art-accents { display:none; }
+:root[data-edition=atelier] .mural-workspace--guest.is-entering .mural-guest-art img { animation:none; }
+
+/* Closing band before the footer. */
+:root[data-edition=atelier] #main[data-page=home] .atelier-band {
+  grid-column:1; grid-row:5;
+  width:var(--mural-content); margin:0 auto;
+  display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:var(--at-24) var(--at-40);
+  padding:var(--at-80) 0;
+}
+:root[data-edition=atelier] .atelier-band-kicker { grid-column:1/-1; margin:0; font:600 var(--at-text-12)/1 var(--at-sans); letter-spacing:.14em; text-transform:uppercase; color:var(--at-ink-3); }
+:root[data-edition=atelier] .atelier-band h2 { margin:0; font:700 clamp(36px,5vw,72px)/1.06 var(--at-serif); letter-spacing:-.035em; color:var(--at-indigo); }
+:root[data-edition=atelier] .atelier-band-actions { display:flex; flex-wrap:wrap; gap:var(--at-12); }
+:root[data-edition=atelier] .atelier-band .btn { min-height:52px; padding-inline:var(--at-32); font-size:var(--at-text-16); }
+
+@media(max-width:1080px) {
+  :root[data-edition=atelier] #main[data-page=home] .recruit-section { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:760px) {
+  :root[data-edition=atelier] .atelier-facts { margin-left:0; width:100%; justify-content:space-between; padding-top:var(--at-12); border-top:1px solid var(--line); }
+  :root[data-edition=atelier] .mural-workspace--guest .mural-workspace-inner,
+  :root[data-edition=atelier] .mural-workspace--developer .mural-workspace-inner { grid-template-columns:minmax(0,1fr); }
+  :root[data-edition=atelier] .mural-workspace--guest .mural-workspace-copy { padding:var(--at-60) var(--at-20) var(--at-40); justify-self:stretch; }
+  :root[data-edition=atelier] .mural-guest-art { min-height:280px; }
+  :root[data-edition=atelier] #main[data-page=home] .atelier-band { grid-template-columns:minmax(0,1fr); padding:var(--at-60) 0; }
+}
+@media(max-width:600px) {
+  :root[data-edition=atelier] #main[data-page=home] .catalog-row:nth-of-type(n)>.row-title { font-size:var(--at-text-18); }
+  :root[data-edition=atelier] .atelier-lede { font-size:var(--at-text-16); }
+}
+:root[data-edition=atelier] .atelier-lede { max-width:none; }
+:root[data-edition=atelier] .mural-workspace--guest .mural-workspace-copy h2 { font-size:clamp(32px,3.6vw,56px); }
+:root[data-edition=atelier] .mural-workspace--guest .mural-workspace-copy { max-width:680px; }

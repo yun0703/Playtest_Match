@@ -256,7 +256,7 @@ function homeGenresHtml(tests){const button=g=>`<button class="side-link ${ui.ge
 function workspace(side,body){
  return `<div class="store-layout">${side?`<aside class="store-sidebar">${side}</aside>`:''}<div class="store-content">${body}</div></div>`;
 }
-function islandArt(){return '<img class="island-art" src="/assets/playtest-island.jpg" alt="">';}
+function islandArt(){return '<img class="island-art" src="/assets/playtest-island.webp" alt="">';}
 function sectionNav(label,action,selected,items){
  return `<h2>${label}</h2>${items.map(([key,title])=>`<button type="button" class="side-link ${key===selected?'active':''}" aria-pressed="${key===selected}" data-act="${action}" data-tab="${key}">${title}</button>`).join('')}`;
 }
