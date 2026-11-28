@@ -99,16 +99,20 @@ const caseStyle=index=>{const [nb,nf]=NATURAL[index%NATURAL.length],[pb,pf]=PAST
 const MIN_CASES=7;
 function withSlots(real) {
   if(!real.length||real.length>=MIN_CASES)return real;
-  const slots=Array.from({length:MIN_CASES-real.length},(_,i)=>({id:'__slot-'+i,placeholder:true,title:'',team:''}));
+  // Each open slot stands for a genre that has no game yet, in that genre's colour.
+  const taken=new Set(real.map(genreOf));
+  const wanted=[...MAIN_GENRES.filter(genre=>!taken.has(genre)),...GENRES.slice(8)];
+  const slots=Array.from({length:MIN_CASES-real.length},(_,i)=>({id:'__slot-'+i,placeholder:true,slotGenre:wanted[i%wanted.length],title:'',team:''}));
   // Spread the real games evenly between the slots.
   const out=[...slots];
   real.forEach((game,i)=>out.splice(Math.round(i*(MIN_CASES)/real.length),0,game));
   return out.slice(0,Math.max(MIN_CASES,real.length));
 }
-function slotSpineHtml(){return `<div class="shelf-face shelf-spine pack-slot"><span class="pack-slot-plus" aria-hidden="true">+</span><span class="shelf-spine-title" style="--len:9">${english()?'NEXT GAME':'다음 게임 자리'}</span></div>`;}
-function slotCoverHtml(){return `<div class="shelf-face shelf-cover pack-slot"><div class="pack-slot-inner"><span class="pack-slot-plus" aria-hidden="true">+</span><strong>${english()?'Your game could be here':'이 자리에 당신의 게임을'}</strong><span>${english()?'Post a game':'게임 등록하기'} →</span></div></div>`;}
+const slotColour=genre=>{const [bg,ink]=GENRE_COLOURS[genre]||GENRE_COLOURS['그 외'];return `--slot:${bg};--slot-ink:${ink}`;};
+function slotSpineHtml(game){return `<div class="shelf-face shelf-spine pack-slot" style="${slotColour(game.slotGenre)}"><span class="pack-band"><b>OPEN</b></span><span class="shelf-spine-title" style="--len:${Math.max(5,[...game.slotGenre].length+1)}">${esc(game.slotGenre)}</span><span class="pack-slot-plus" aria-hidden="true">+</span></div>`;}
+function slotCoverHtml(game){return `<div class="shelf-face shelf-cover pack-slot" style="${slotColour(game.slotGenre)}"><div class="pack-cover-band"><span>${esc(game.slotGenre)}</span><span class="pack-cover-brand">IndieTest</span></div><div class="pack-slot-inner"><span class="pack-slot-plus" aria-hidden="true">+</span><strong>${english()?`Waiting for a ${esc(game.slotGenre)} game`:`${esc(game.slotGenre)} 게임을 기다리고 있어요`}</strong><span>${english()?'Post a game':'게임 등록하기'} →</span></div></div>`;}
 function spineHtml(game,index,sweep='') {
-  if(game.placeholder)return slotSpineHtml();
+  if(game.placeholder)return slotSpineHtml(game);
   const p=platformOf(game);
   return `<div class="shelf-face shelf-spine pack-colour" style="${caseStyle(index)}${sweep}${genreStyle(game)}">
     ${spinePhoto(game)}
@@ -118,7 +122,7 @@ function spineHtml(game,index,sweep='') {
   </div>`;
 }
 function coverHtml(game,index,sweep='') {
-  if(game.placeholder)return slotCoverHtml();
+  if(game.placeholder)return slotCoverHtml(game);
   const p=platformOf(game);
   return `<div class="shelf-face shelf-cover pack-light" style="${caseStyle(index)}${sweep}${genreStyle(game)}">
     <div class="pack-cover-band"><span>${esc(p.label)}</span><span class="pack-cover-brand">IndieTest</span></div>
@@ -378,8 +382,8 @@ export function attachShelf(main) {
     active=index;
     const game=games[index];
     if(game.placeholder){
-      swap(hero.querySelector('.shelf-cap-title'),english()?"Next game's spot":'다음 게임 자리',dir);
-      swap(hero.querySelector('.shelf-cap-sub'),english()?'Post a game and it lands here':'게임을 등록하면 이 자리에 꽂혀요',dir);
+      swap(hero.querySelector('.shelf-cap-title'),english()?`${game.slotGenre} spot`:`${game.slotGenre} 게임 자리`,dir);
+      swap(hero.querySelector('.shelf-cap-sub'),english()?`Post a ${game.slotGenre} game and it lands here`:`${game.slotGenre} 게임을 등록하면 이 자리에 꽂혀요`,dir);
       swap(hero.querySelector('.shelf-cap-meta'),' ',dir);
       tabs.querySelectorAll('.shelf-tab').forEach(button=>button.classList.remove('is-active'));
       indicator.style.width='0px';
@@ -529,7 +533,24 @@ export function attachShelf(main) {
   function insetFrom(rect) {
     return `inset(${rect.top}px ${innerWidth-rect.right}px ${innerHeight-rect.bottom}px ${rect.left}px round 3px)`;
   }
-  async function posterArt(game) {
+  async function posterArt(game,tape) {
+    const art=detail.querySelector('.shelf-poster-art');
+    const img=art.querySelector('image');
+    const uploaded=tape?.cover.querySelector('img.shelf-cover-photo');
+    if(uploaded) {
+      if(!uploaded.src)await shelfMedia.hydrate(tape.cover);
+      if(uploaded.src) {
+        const image=new Image();
+        image.src=uploaded.src;
+        try{await image.decode();}catch{}
+        const W=image.naturalWidth||1600,H=image.naturalHeight||900;
+        art.setAttribute('viewBox',`0 0 ${W} ${H}`);
+        img.setAttribute('href',uploaded.src);
+        img.setAttribute('width',W);
+        img.setAttribute('height',H);
+        return;
+      }
+    }
     const probe=document.createElement('div');
     probe.className=artClass(game);
     probe.style.cssText='position:absolute;width:10px;height:10px;visibility:hidden';
@@ -545,9 +566,7 @@ export function attachShelf(main) {
     const W=image.naturalWidth||1600,H=image.naturalHeight||900;
     const tw=sprite?W/3:W,th=sprite?H/2:H;
     const tx=sprite?Math.round(position[0]*2)*tw:0,ty=sprite?Math.round(position[1])*th:0;
-    const art=detail.querySelector('.shelf-poster-art');
     art.setAttribute('viewBox',`${tx} ${ty} ${tw} ${th}`);
-    const img=art.querySelector('image');
     img.setAttribute('href',url);
     img.setAttribute('width',W);
     img.setAttribute('height',H);
@@ -587,7 +606,7 @@ export function attachShelf(main) {
     detail.querySelector('.shelf-detail-question').hidden=!game.feedbackFocus||game.feedbackFocus===game.teaser;
     detail.querySelector('.shelf-detail-cta').dataset.id=game.id;
     for(const circle of blobs)circle.setAttribute('r',0);
-    await posterArt(game);
+    await posterArt(game,tape);
     const rect=tape.cover.getBoundingClientRect();
     detail.hidden=false;
     detail.style.transformOrigin=`${rect.left+rect.width/2}px ${rect.top+rect.height/2}px`;

@@ -1217,3 +1217,19 @@
 :root[data-shelf] .pack-slot-plus { border-radius:50% !important; }
 :root[data-shelf] .shelf-spine.pack-slot .pack-slot-plus,
 :root[data-shelf] .pack-slot-inner .pack-slot-plus { border-radius:50% !important; }
+
+/* ---------- Genre-colour open slots ---------- */
+:root[data-shelf] .shelf-spine.pack-slot {
+  background:linear-gradient(90deg,rgba(0,0,0,.1),rgba(255,255,255,.2) 30%,rgba(255,255,255,0) 60%,rgba(0,0,0,.08)),var(--slot) !important;
+  border:0 !important; color:var(--slot-ink); justify-content:flex-start; padding:0 0 calc(var(--ws) * .3); gap:calc(var(--Hpx) * .02);
+}
+:root[data-shelf] .shelf-spine.pack-slot .pack-band { background:rgba(0,0,0,.18) !important; color:var(--slot-ink); }
+:root[data-shelf] .shelf-spine.pack-slot .shelf-spine-title {
+  font-family:"Song Myung","Nanum Myeongjo",serif !important; font-weight:400 !important; letter-spacing:.04em !important;
+  font-size:min(calc(var(--ws) * .5),calc(var(--Hpx) * .5 / var(--len))) !important; color:var(--slot-ink) !important;
+}
+:root[data-shelf] .shelf-spine.pack-slot .pack-slot-plus { margin-top:auto; width:calc(var(--ws) * .5); border-color:currentColor; opacity:.85; }
+:root[data-shelf] .shelf-cover.pack-slot { background:var(--sh-paper) !important; border:0 !important; padding:calc(var(--d) * .035); grid-template-rows:auto 1fr; }
+:root[data-shelf] .shelf-cover.pack-slot .pack-cover-band { background:var(--slot) !important; color:var(--slot-ink) !important; }
+:root[data-shelf] .shelf-cover.pack-slot .pack-slot-inner { border:1px dashed var(--slot); border-top:0; }
+:root[data-shelf] .shelf-cover.pack-slot .pack-slot-plus { color:var(--slot); }
