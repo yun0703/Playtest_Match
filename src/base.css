@@ -174,3 +174,4 @@ footer p{max-width:70ch}
   .qhead .actions{margin-left:0}
 }
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
+.preserve-lines{white-space:pre-line;overflow-wrap:anywhere}

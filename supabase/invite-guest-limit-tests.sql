@@ -62,7 +62,7 @@ begin
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
  result=pt_command('save_test',jsonb_build_object('data',base||'{"title":"Small QA","vis":"public","slots":4,"allowGuests":true}'));
  select value->>'id' into small_game from jsonb_array_elements(result->'tests') where value->>'title'='Small QA';
- result=pt_command('save_test',jsonb_build_object('data',base||'{"title":"Open QA","vis":"public","slots":null,"allowGuests":true}'));
+ result=pt_command('save_test',jsonb_build_object('data',base||'{"title":"Open QA","vis":"public","slots":50,"allowGuests":true}'));
  select value->>'id' into open_game from jsonb_array_elements(result->'tests') where value->>'title'='Open QA';
 
  perform set_config('request.jwt.claim.sub','',true);
@@ -80,7 +80,7 @@ begin
  perform pt_command('apply',jsonb_build_object('testId',small_game,'agreed',true));
  if pt_recruitment_count(small_game)<>4 then raise exception 'FAIL members could not use the reserved places'; end if;
 
- -- Unlimited game: at most 10 unsubmitted guests, and 5 new IDs per client per hour.
+ -- Large game (50 places): at most 10 unsubmitted guests, and 5 new IDs per client per hour.
  perform set_config('request.jwt.claim.sub','',true);
  perform set_config('request.headers','{"cf-connecting-ip":"203.0.113.9"}',true);
  for i in 1..5 loop perform pt_guest_playtest('join',open_game,null,'{"agreed":true}'); end loop;

@@ -149,7 +149,7 @@ function updateGenreSummary(){
 function updateDevSelectors(){
   const allowGuests=$('#f-allow-guests');
   if(allowGuests){
-    allowGuests.disabled=$('#f-vis').value!=='public'||$('#f-platform').value!=='WebGL';
+    allowGuests.disabled=$('#f-vis').value!=='public'||$('#f-platform').value!=='WebGL'||$('#f-unlimited').checked;
     if(allowGuests.disabled)allowGuests.checked=false;
   }
   const unlimited=$('#f-unlimited').checked;
@@ -226,7 +226,7 @@ function gameArt(t, hero=false){
  return `<div class="game-art art-${index===undefined?'new':index} ${hero?'hero-art':''}" role="img" aria-label="${esc(t.title)} 예시 게임 아트워크"><span class="art-caption">CONCEPT ART · 예시 이미지</span></div>`;
 }
 function favoriteButton(t){const saved=S.favorites.includes(t.id);return `<button class="favorite-button ${saved?'saved':''}" type="button" data-act="favorite" data-id="${esc(t.id)}" aria-pressed="${saved}" aria-label="${saved?'찜 해제':'게임 찜'}"><span aria-hidden="true">${saved?'♥':'♡'}</span><span>${saved?'찜한 게임':'찜하기'}</span></button>`;}
-function guestAvailable(test){return !!cloud&&!cloud.user&&test?.allowGuests===true&&test.vis==='public'&&test.platform==='WebGL'&&recruitmentOpen(test);}
+function guestAvailable(test){return !!cloud&&!cloud.user&&test?.allowGuests===true&&test.vis==='public'&&test.platform==='WebGL'&&!unlimitedCapacity(test)&&recruitmentOpen(test);}
 function guestFor(id){return !cloud?.user&&ui.guest?.id===id?ui.guest?.participation:null;}
 function detailTest(id){
  const test=byId(id),guest=guestFor(id);
@@ -339,7 +339,7 @@ function renderDetail(t){
   t=detailTest(t.id);
   const own=t.owner==='me',m=guest?{status:guest.submitted?'done':'applied',playedBuild:guest.playedBuild}:own?null:S.mine[t.id],st=m&&m.status,access=st==='applied'||st==='done',closed=t.status!=='open'||deadlineState(t.deadline)==='overdue',full=capacityFull(t),url=safeUrl(t.link);
   const guarded=access
-    ?`<div><h3>플레이 방법</h3><p style="margin-top:6px">${esc(t.how)}</p></div>
+    ?`<div><h3>플레이 방법</h3><p class="preserve-lines" style="margin-top:6px">${esc(t.how)}</p></div>
       <div><h3>이 설문에 답해 주세요</h3><ol class="qs" style="margin-top:6px">${t.survey.map(q=>`<li>${esc(q.label)} <span class="mono muted">${QTYPE[q.type]}</span></li>`).join('')}</ol></div>`
     :`<div class="lock"><span class="mono">LOCKED</span><p>플레이 방법, 설문 문항, 빌드 링크는 이용 동의 후 참여가 열리면 공개됩니다.</p></div>`;
   const info=`${guest?'':progressHtml(t,m)}${focusHtml(t)}${t.media.length?galleryHtml(t,ui.gallery):`<div class="detail-cover">${gameArt(t)}</div>`}<div class="panel"><div class="row"><div class="stack" style="gap:4px"><h2 data-no-translate>${esc(t.title)}</h2><p class="muted">${esc(t.team)}</p></div><span class="pair">${own?'<span class="badge b-mine">내 테스트</span>':''}${t.status!=='open'?tBadge(t.status):''}${visBadge(t.vis)}${t.allowGuests?'<span class="badge b-vis">익명 참여 가능</span>':''}</span></div>
@@ -495,7 +495,7 @@ function devForm(){
         <p class="hint">신청 전에는 게임명, 팀, 장르, 플랫폼, 소요 시간, 한 줄 소개만 보입니다.</p>
         <div class="fields">
           <div class="field"><label for="f-vis">공개 범위</label><select id="f-vis">${Object.keys(VIS).map(k=>`<option value="${k}" ${k===curVis?'selected':''}>${VIS[k]}</option>`).join('')}</select><span class="hint" id="vis-desc">${VIS_DESC[curVis]}</span></div>
-          ${cloud?`<div class="field wide"><label class="check"><input type="checkbox" id="f-allow-guests" ${e?.allowGuests?'checked':''} ${curVis==='public'&&(e?.platform||PLATFORMS[0])==='WebGL'?'':'disabled'} aria-describedby="guest-setting-hint"><span>익명 테스트 허용</span></label><p class="hint" id="guest-setting-hint">공개 WebGL 게임에서만 선택할 수 있습니다. 로그인 없이 빌드에 접근하므로 공개해도 되는 링크를 사용해 주세요.</p></div>`:''}
+          ${cloud?`<div class="field wide"><label class="check"><input type="checkbox" id="f-allow-guests" ${e?.allowGuests?'checked':''} ${curVis==='public'&&(e?.platform||PLATFORMS[0])==='WebGL'&&!unlimited?'':'disabled'} aria-describedby="guest-setting-hint"><span>익명 테스트 허용</span></label><p class="hint" id="guest-setting-hint">모집 인원을 정한 공개 WebGL 게임에서만 선택할 수 있습니다. 로그인 없이 빌드에 접근하므로 공개해도 되는 링크를 사용해 주세요.</p></div>`:''}
           <div class="field" id="code-field" ${curVis==='invite'?'':'hidden'}><label for="f-code">초대 코드</label><input type="text" id="f-code" value="${v('code')}" maxlength="12" autocomplete="off"><span class="hint">영문과 숫자 8~12자. 비워 두면 자동으로 만들어집니다.</span></div>
           <div class="field wide"><label for="f-focus">이번 테스트에서 확인할 점</label><textarea id="f-focus" maxlength="600" placeholder="예: 튜토리얼 없이 조작을 이해할 수 있는지, 처음 막히는 구간이 어디인지 알고 싶어요.">${v('feedbackFocus')}</textarea><span class="hint">신청 전 카드와 상세에 공개됩니다. 10~600자로 구체적인 목표를 적어 주세요.</span></div><div class="field wide"><label for="f-teaser">공개 소개 (한 줄)</label><input type="text" id="f-teaser" value="${v('teaser')}" maxlength="80"><span class="hint">목록에 그대로 보입니다. 핵심 메커니즘은 적지 마세요.</span></div>
         </div></fieldset>
@@ -581,7 +581,7 @@ function renderDeveloper(){
 /* ---------- admin ---------- */
 function testInfo(t){
   return `<div class="row"><div class="stack" style="gap:4px"><h3 data-no-translate>${esc(t.title)}</h3><p class="muted">${esc(t.team)} · ${gameGenreHtml(t)} · ${esc(t.platform)} · <span class="mono">${esc(t.build)}</span></p></div><span class="pair">${visBadge(t.vis)}${tBadge(t.status)}</span></div>
-    <p data-no-translate>${esc(t.teaser)}</p><dl class="facts"><dt>LINK</dt><dd class="mono">${esc(t.link)}</dd><dt>HOW</dt><dd>${esc(t.how)}</dd></dl>`;
+    <p data-no-translate>${esc(t.teaser)}</p><dl class="facts"><dt>LINK</dt><dd class="mono">${esc(t.link)}</dd><dt>HOW</dt><dd class="preserve-lines">${esc(t.how)}</dd></dl>`;
 }
 const moderationLabels={dismiss:'신고 기각',hide:'숨김 처리',restore:'재공개',auto_hide:'자동 숨김'};
 function moderationControls(t,actions){

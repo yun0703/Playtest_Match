@@ -1,6 +1,6 @@
 export default {
   "익명 테스트 허용": "Allow anonymous playtests",
-  "공개 WebGL 게임에서만 선택할 수 있습니다. 로그인 없이 빌드에 접근하므로 공개해도 되는 링크를 사용해 주세요.": "Available for public WebGL games. Use a link you can share with visitors who are signed out.",
+  "모집 인원을 정한 공개 WebGL 게임에서만 선택할 수 있습니다. 로그인 없이 빌드에 접근하므로 공개해도 되는 링크를 사용해 주세요.": "Available for public WebGL games with a set number of places. Use a link you can share with visitors who are signed out.",
   "익명 참여 가능": "Anonymous playtesting available",
   "익명 참여 상태를 불러오는 중…": "Loading anonymous participation…",
   "익명 참여 상태를 확인하지 못했습니다. 다시 시도해 주세요.": "Could not load your anonymous session. Please try again.",
