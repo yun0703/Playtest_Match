@@ -56,8 +56,8 @@ export function mosaicSection(games,{english=false,onBrowse}={}) {
       <p class="mosaic-kicker">${english?'For players & developers':'플레이어와 개발자를 위해'}</p>
       <h2 class="mosaic-title" id="mosaic-title">${lines.map(line=>`<span class="mosaic-line"><span>${esc(line)}</span></span>`).join('')}</h2>
       <p class="mosaic-body">${!games.length?(english?'IndieTest is a testing space for games still in the making. Post your game and hear what players think.':'IndieTest는 아직 만들어지고 있는 게임들의 테스트 공간이에요. 지금 게임을 올리고, 플레이어들에게 의견을 받아보세요.'):english
-        ?`IndieTest is an archive of games still in the making. Right now <b>${games.length} games</b> are waiting for their first players, and every answer goes straight to the people building them.`
-        :`IndieTest는 아직 만들어지고 있는 게임들의 아카이브예요. 지금 <b>${games.length}개의 게임</b>이 첫 플레이어를 기다리고, 남긴 소감은 만드는 사람에게 바로 전해져요.`}</p>
+        ?`IndieTest is a testing space for games still in the making. Right now <b>${games.length} games</b> are waiting for their first players, and every answer goes straight to the people building them.`
+        :`IndieTest는 아직 만들어지고 있는 게임들의 테스트 공간이에요. 지금 <b>${games.length}개의 게임</b>이 첫 플레이어를 기다리고, 남긴 소감은 만드는 사람에게 바로 전해져요.`}</p>
       <div class="mosaic-actions">
         <button type="button" class="btn" data-mosaic-browse>${english?'Browse playtests':'모집 중인 게임 보기'}</button>
         <a class="mosaic-link" href="#developer" data-nav="developer" data-sub="new"><span>${english?'Post your game':'내 게임 등록하기'}</span><i aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 12 L12 4 M5 4 H12 V11" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></i></a>
