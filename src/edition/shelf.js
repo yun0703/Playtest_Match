@@ -108,7 +108,8 @@ function withSlots(real) {
   real.forEach((game,i)=>out.splice(Math.round(i*(MIN_CASES)/real.length),0,game));
   return out.slice(0,Math.max(MIN_CASES,real.length));
 }
-const slotColour=genre=>{const [bg,ink]=GENRE_COLOURS[genre]||GENRE_COLOURS['그 외'];return `--slot:${bg};--slot-ink:${ink}`;};
+// Open slots use the jewel palette, one colour per genre in a fixed order.
+const slotColour=genre=>{const i=Math.max(0,GENRES.indexOf(genre));const [bg,ink]=JEWEL[i%JEWEL.length];return `--slot:${bg};--slot-ink:${ink}`;};
 function slotSpineHtml(game){return `<div class="shelf-face shelf-spine pack-slot" style="${slotColour(game.slotGenre)}"><span class="pack-band"><b>OPEN</b></span><span class="shelf-spine-title" style="--len:${Math.max(5,[...game.slotGenre].length+1)}">${esc(game.slotGenre)}</span><span class="pack-slot-plus" aria-hidden="true">+</span></div>`;}
 function slotCoverHtml(game){return `<div class="shelf-face shelf-cover pack-slot" style="${slotColour(game.slotGenre)}"><div class="pack-cover-band"><span>${esc(game.slotGenre)}</span><span class="pack-cover-brand">IndieTest</span></div><div class="pack-slot-inner"><span class="pack-slot-plus" aria-hidden="true">+</span><strong>${english()?`Waiting for a ${esc(game.slotGenre)} game`:`${esc(game.slotGenre)} 게임을 기다리고 있어요`}</strong><span>${english()?'Post a game':'게임 등록하기'} →</span></div></div>`;}
 function spineHtml(game,index,sweep='') {
