@@ -1245,3 +1245,17 @@
 :root[data-shelf] .shelf-spine.pack-slot .pack-slot-plus { color:var(--slot); opacity:.7; }
 :root[data-shelf] .shelf-cover.pack-slot .pack-cover-band { background:color-mix(in srgb,var(--slot) 22%,var(--sh-paper)) !important; color:var(--slot) !important; }
 :root[data-shelf] .shelf-cover.pack-slot .pack-slot-inner { border-color:color-mix(in srgb,var(--slot) 50%,transparent); }
+
+/* Empty cases get the same plastic shading and sleeve reflection as real ones. */
+:root[data-shelf] .shelf-spine.pack-slot {
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.08),rgba(255,255,255,.35) 30%,rgba(255,255,255,0) 60%,rgba(0,0,0,.07)),
+    color-mix(in srgb,var(--slot) 16%,var(--sh-paper)) !important;
+  box-shadow:inset 1px 0 0 rgba(255,255,255,.5),inset -1px 0 0 rgba(0,0,0,.06) !important;
+}
+:root[data-shelf] .shelf-spine.pack-slot::before,
+:root[data-shelf] .shelf-cover.pack-slot::before {
+  content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,0) 52%);
+}
+:root[data-shelf] .shelf-cover.pack-slot.is-front { box-shadow:0 34px 60px -26px rgba(20,16,10,.38),0 0 0 1px rgba(0,0,0,.06) !important; }
