@@ -308,7 +308,7 @@
 :root[data-shelf] .shelf-tab.is-empty { color:var(--sh-muted); cursor:default; }
 
 /* Shape: no pills or rounded panels anywhere except the round play button and cursor. */
-:root[data-shelf] *:not(.shelf-play):not(.shelf-cursor-ring):not(.shelf-cursor-dot):not(.shelf-cursor):not(.shelf-face):not(.pack-cover-art):not(.pack-cover-band):not(.pack-logo i):not(.shelf-cursor-label i) { border-radius:0 !important; }
+:root[data-shelf] *:not(.shelf-play):not(.shelf-cursor-ring):not(.shelf-cursor-dot):not(.shelf-cursor):not(.shelf-face):not(.pack-cover-art):not(.pack-cover-band):not(.pack-logo i):not(.shelf-cursor-label i):not(.pack-slot-plus) { border-radius:0 !important; }
 
 /* Buttons read like the boxed labels on the shelf. */
 :root[data-shelf] .btn {
@@ -1177,3 +1177,43 @@
   border:1px solid var(--line) !important; background:var(--sh-paper);
   font:800 20px/1.4 "Pretendard Variable","Pretendard",system-ui,sans-serif; color:var(--sh-ink); text-align:center;
 }
+
+/* ---------- Game registration form ---------- */
+:root[data-shelf] .capacity-modes label,
+:root[data-shelf] .capacity-modes .check { display:flex; align-items:center; justify-content:center; gap:10px; text-align:center; }
+:root[data-shelf] .capacity-stepper :is(button,input) { display:flex; align-items:center; justify-content:center; text-align:center; padding:0 !important; }
+:root[data-shelf] .capacity-stepper input { font-variant-numeric:tabular-nums; }
+:root[data-shelf] .capacity-stepper+.hint { margin-top:8px; }
+:root[data-shelf] #main[data-page=developer] fieldset>.hint { margin:0 0 16px; }
+:root[data-shelf] #main[data-page=developer] label[for=f-media] { display:block; margin:20px 0 10px; }
+:root[data-shelf] #main[data-page=developer] #f-media {
+  display:block; width:100%; max-width:520px; padding:18px !important; min-height:auto !important;
+  border:1px dashed var(--sh-rule) !important; background:var(--sh-paper); cursor:pointer;
+}
+:root[data-shelf] #main[data-page=developer] #f-media::file-selector-button {
+  margin-right:16px; padding:10px 18px; border:1px solid var(--sh-ink); background:var(--sh-yellow); color:#141414;
+  font:600 13px/1 var(--at-sans); letter-spacing:.04em; cursor:pointer;
+}
+:root[data-shelf] #main[data-page=developer] #f-media+.hint { margin-top:10px; }
+:root[data-shelf] #main[data-page=developer] #media-preview:not(:empty) { margin-top:20px; }
+:root[data-shelf] #main[data-page=developer] #f-how { min-height:220px; line-height:1.6; padding:14px 16px !important; resize:vertical; }
+
+/* ---------- Open slots on a sparse shelf ---------- */
+:root[data-shelf] .shelf-spine.pack-slot {
+  background:repeating-linear-gradient(135deg,var(--sh-paper) 0 8px,var(--at-paper-2) 8px 9px) !important;
+  border:1px dashed var(--sh-muted) !important; color:var(--sh-muted);
+  justify-content:flex-start; padding-top:calc(var(--ws) * .4); gap:calc(var(--Hpx) * .03);
+}
+:root[data-shelf] .shelf-spine.pack-slot .shelf-spine-title { font:600 calc(var(--ws) * .3)/1 var(--at-sans) !important; letter-spacing:.12em; color:var(--sh-muted); }
+:root[data-shelf] .pack-slot-plus { display:grid; place-items:center; width:calc(var(--ws) * .62); aspect-ratio:1; border:1px solid currentColor; border-radius:50% !important; font:400 calc(var(--ws) * .4)/1 var(--at-sans); }
+:root[data-shelf] .shelf-spine.pack-slot::before,
+:root[data-shelf] .shelf-cover.pack-slot::before { content:none; }
+:root[data-shelf] .shelf-cover.pack-slot { background:var(--sh-paper) !important; border:1px dashed var(--sh-ink) !important; padding:0; display:grid; }
+:root[data-shelf] .pack-slot-inner { display:grid; place-content:center; justify-items:center; gap:14px; padding:24px; text-align:center; color:var(--sh-ink); }
+:root[data-shelf] .pack-slot-inner .pack-slot-plus { width:64px; font-size:32px; border-width:1.5px; }
+:root[data-shelf] .pack-slot-inner strong { font:800 calc(var(--d) * .09)/1.2 "Pretendard Variable","Pretendard",system-ui,sans-serif; letter-spacing:-.03em; word-break:keep-all; }
+:root[data-shelf] .pack-slot-inner span:last-child { padding:8px 14px; background:var(--sh-yellow); color:#141414; font:600 13px/1 var(--at-sans); }
+:root[data-shelf] .shelf-cover.pack-slot .pack-slot-inner { height:100%; align-content:center; }
+:root[data-shelf] .pack-slot-plus { border-radius:50% !important; }
+:root[data-shelf] .shelf-spine.pack-slot .pack-slot-plus,
+:root[data-shelf] .pack-slot-inner .pack-slot-plus { border-radius:50% !important; }

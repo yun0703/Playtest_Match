@@ -414,9 +414,9 @@ function reqsHtml(t){
 function surveyBuilderHtml(){
   const d=ui.draft;
   return `<div class="survey-goal-guide">
-    <h3>테스트 목표에 답하는 문항</h3>
-    <p>이번 테스트에서 확인할 점에 직접 답할 수 있는 질문을 하나 넣어 보세요.</p>
-    <p class="hint">경로를 쉽게 찾는지 확인하려면 “첫 배달 경로를 찾을 때 어디에서 막혔나요?”처럼 물어보세요.</p>
+    <h3>테스트 목표에 맞춘 질문</h3>
+    <p>위에 적은 '이번 테스트에서 확인할 점'을 그대로 물어보는 질문을 하나 넣으면, 원하는 답을 바로 얻을 수 있어요.</p>
+    <p class="hint">예: 길 찾기가 쉬운지 궁금하다면 “첫 배달 장소를 찾을 때 어디에서 헤맸나요?”처럼 물어보세요.</p>
     <button class="btn ghost sm" type="button" data-act="q-add-goal" ${d.length>=MAXQ?'disabled':''}>테스트 목표로 문항 추가</button>
   </div><div class="stack">${d.map((q,i)=>`<div class="qrow" data-i="${i}">
     <div class="qhead"><span class="qno">Q${i+1}</span>

@@ -49,7 +49,7 @@ const smooth=x=>x*x*(3-2*x);
 const genreOf=game=>(Array.isArray(game.genres)&&game.genres[0])||game.genre||OTHER_GENRE;
 // Tabs follow the home page: the first eight genres get their own tab, everything else is "그 외".
 const MAIN_GENRES=GENRES.slice(0,8);
-const tabOf=game=>MAIN_GENRES.includes(genreOf(game))?genreOf(game):OTHER_GENRE;
+const tabOf=game=>game.placeholder?null:MAIN_GENRES.includes(genreOf(game))?genreOf(game):OTHER_GENRE;
 const english=()=>document.documentElement.lang==='en';
 
 // The live site hands the shelf the catalogue it just rendered; the design preview
@@ -95,7 +95,20 @@ const PLATFORM={
 const platformOf=game=>PLATFORM[game.platform]||{band:'#141414',shell:'light',label:String(game.platform||'GAME').toUpperCase()};
 // Every game gets its own case colour, picked by its position in the catalogue.
 const caseStyle=index=>{const [nb,nf]=NATURAL[index%NATURAL.length],[pb,pf]=PASTEL[index%PASTEL.length],[mb,mf]=MID[index%MID.length],[vb,vf]=VIVID[index%VIVID.length];const [jb,jf]=JEWEL[index%JEWEL.length];return `--jewel:${jb};--jewel-ink:${jf};--natural:${nb};--natural-ink:${nf};--pastel:${pb};--pastel-ink:${pf};--mid:${mb};--mid-ink:${mf};--vivid:${vb};--vivid-ink:${vf}`;};
+// With few games, the shelf is padded with open slots so one game is not repeated wall to wall.
+const MIN_CASES=7;
+function withSlots(real) {
+  if(!real.length||real.length>=MIN_CASES)return real;
+  const slots=Array.from({length:MIN_CASES-real.length},(_,i)=>({id:'__slot-'+i,placeholder:true,title:'',team:''}));
+  // Spread the real games evenly between the slots.
+  const out=[...slots];
+  real.forEach((game,i)=>out.splice(Math.round(i*(MIN_CASES)/real.length),0,game));
+  return out.slice(0,Math.max(MIN_CASES,real.length));
+}
+function slotSpineHtml(){return `<div class="shelf-face shelf-spine pack-slot"><span class="pack-slot-plus" aria-hidden="true">+</span><span class="shelf-spine-title" style="--len:9">${english()?'NEXT GAME':'다음 게임 자리'}</span></div>`;}
+function slotCoverHtml(){return `<div class="shelf-face shelf-cover pack-slot"><div class="pack-slot-inner"><span class="pack-slot-plus" aria-hidden="true">+</span><strong>${english()?'Your game could be here':'이 자리에 당신의 게임을'}</strong><span>${english()?'Post a game':'게임 등록하기'} →</span></div></div>`;}
 function spineHtml(game,index,sweep='') {
+  if(game.placeholder)return slotSpineHtml();
   const p=platformOf(game);
   return `<div class="shelf-face shelf-spine pack-colour" style="${caseStyle(index)}${sweep}${genreStyle(game)}">
     ${spinePhoto(game)}
@@ -105,6 +118,7 @@ function spineHtml(game,index,sweep='') {
   </div>`;
 }
 function coverHtml(game,index,sweep='') {
+  if(game.placeholder)return slotCoverHtml();
   const p=platformOf(game);
   return `<div class="shelf-face shelf-cover pack-light" style="${caseStyle(index)}${sweep}${genreStyle(game)}">
     <div class="pack-cover-band"><span>${esc(p.label)}</span><span class="pack-cover-brand">IndieTest</span></div>
@@ -161,6 +175,7 @@ export function attachShelf(main) {
   let frame=0,last=performance.now();
   let drag=null,suppressClick=false,wheelTimer=0;
   let blobFrame=0;
+  let realIds='';
   // Performance: cache the shelf's screen box, skip frames when nothing moves,
   // and stop the loop entirely while the shelf is off screen or the tab is hidden.
   let box={left:0,top:0,width:innerWidth,height:400};
@@ -263,7 +278,8 @@ export function attachShelf(main) {
 
   // ---------- Build ----------
   function build() {
-    games=loadGames(main);
+    realIds=loadGames(main).map(game=>game.id).join();
+    games=withSlots(loadGames(main));
     copies=games.length?Math.max(3,Math.ceil(24/games.length)):0;
     stage.replaceChildren();
     tapes=[];
@@ -287,7 +303,7 @@ export function attachShelf(main) {
         tapes.push({el:tape,v,index,lift:0,spine:tape.firstElementChild,cover:tape.lastElementChild,transform:'',shown:true,front:false});
       });
     }
-    const present=new Set(games.map(tabOf));
+    const present=new Set(games.filter(game=>!game.placeholder).map(tabOf));
     tabs.querySelectorAll('button').forEach(button=>button.remove());
     for(const genre of [english()?'All':'전체',...MAIN_GENRES.filter(genre=>present.has(genre)),OTHER_GENRE]) {
       const button=document.createElement('button');
@@ -303,6 +319,7 @@ export function attachShelf(main) {
     void shelfMedia.hydrate(stage);
     // No recruiting games yet: keep the hero, show an empty shelf that invites the first upload.
     hero.classList.toggle('is-empty',!games.length);
+    hero.classList.toggle('has-slots',games.some(game=>game.placeholder));
     if(!games.length){inside=false;cursor.classList.remove('is-visible');}
     hero.querySelector('.shelf-empty')?.remove();
     if(!games.length) {
@@ -315,7 +332,8 @@ export function attachShelf(main) {
       viewport.append(empty);
     }
     const middle=Math.floor(copies/2)*games.length;
-    const start=games.findIndex(game=>daysLeft(game)!==null&&daysLeft(game)<=7);
+    let start=games.findIndex(game=>!game.placeholder&&daysLeft(game)!==null&&daysLeft(game)<=7);
+    if(start<0)start=games.findIndex(game=>!game.placeholder);
     s=T=middle+Math.max(0,start);
     active=-1;
     measure();
@@ -359,6 +377,14 @@ export function attachShelf(main) {
     if(index===active)return;
     active=index;
     const game=games[index];
+    if(game.placeholder){
+      swap(hero.querySelector('.shelf-cap-title'),english()?"Next game's spot":'다음 게임 자리',dir);
+      swap(hero.querySelector('.shelf-cap-sub'),english()?'Post a game and it lands here':'게임을 등록하면 이 자리에 꽂혀요',dir);
+      swap(hero.querySelector('.shelf-cap-meta'),' ',dir);
+      tabs.querySelectorAll('.shelf-tab').forEach(button=>button.classList.remove('is-active'));
+      indicator.style.width='0px';
+      return;
+    }
     const days=daysLeft(game);
     swap(hero.querySelector('.shelf-cap-title'),game.title,dir);
     swap(hero.querySelector('.shelf-cap-sub'),[game.team,genreOf(game)].filter(Boolean).join(' / '),dir);
@@ -544,6 +570,12 @@ export function attachShelf(main) {
     const game=games[active];
     const tape=activeTape();
     if(!game||!tape)return;
+    if(game.placeholder){
+      const link=document.createElement('a');
+      link.href='#developer';link.dataset.nav='developer';link.dataset.sub='new';link.hidden=true;
+      document.body.append(link);link.click();link.remove();
+      return;
+    }
     isOpen=true;
     wake();
     const days=daysLeft(game);
@@ -596,7 +628,7 @@ export function attachShelf(main) {
     }
     const spotlight=main.querySelector('.spotlight:not(.shelf-hero)');
     if(!spotlight)return;
-    const before=games.map(game=>game.id).join();
+    const before=realIds;
     spotlight.replaceWith(hero);
     if(loadGames(main).map(game=>game.id).join()!==before||!tapes.length)build();
     workspaces?.dispose?.();
