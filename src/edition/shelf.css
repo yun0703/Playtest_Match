@@ -1233,3 +1233,15 @@
 :root[data-shelf] .shelf-cover.pack-slot .pack-cover-band { background:var(--slot) !important; color:var(--slot-ink) !important; }
 :root[data-shelf] .shelf-cover.pack-slot .pack-slot-inner { border:1px dashed var(--slot); border-top:0; }
 :root[data-shelf] .shelf-cover.pack-slot .pack-slot-plus { color:var(--slot); }
+
+/* Genre slots read as empty: a faint wash of the jewel colour so uploaded games stand out. */
+:root[data-shelf] .shelf-spine.pack-slot {
+  background:color-mix(in srgb,var(--slot) 16%,var(--sh-paper)) !important;
+  border:1px dashed color-mix(in srgb,var(--slot) 55%,transparent) !important;
+  color:var(--slot) !important;
+}
+:root[data-shelf] .shelf-spine.pack-slot .pack-band { background:color-mix(in srgb,var(--slot) 22%,transparent) !important; color:var(--slot) !important; border-bottom:1px dashed color-mix(in srgb,var(--slot) 45%,transparent); }
+:root[data-shelf] .shelf-spine.pack-slot .shelf-spine-title { color:color-mix(in srgb,var(--slot) 85%,var(--sh-ink)) !important; opacity:.8; }
+:root[data-shelf] .shelf-spine.pack-slot .pack-slot-plus { color:var(--slot); opacity:.7; }
+:root[data-shelf] .shelf-cover.pack-slot .pack-cover-band { background:color-mix(in srgb,var(--slot) 22%,var(--sh-paper)) !important; color:var(--slot) !important; }
+:root[data-shelf] .shelf-cover.pack-slot .pack-slot-inner { border-color:color-mix(in srgb,var(--slot) 50%,transparent); }
